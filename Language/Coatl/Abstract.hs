@@ -67,5 +67,6 @@ data Identifier
   | Operator String
   deriving
   ( Eq
+  , Ord
   , Show
   )
