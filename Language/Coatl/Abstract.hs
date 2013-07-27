@@ -3,8 +3,10 @@
 {-# Language DeriveTraversable #-}
 module Language.Coatl.Abstract where
 -- base
+import Control.Applicative
 import Data.Foldable (Foldable(..))
 import Data.Traversable (Traversable(..))
+import Data.Maybe
 
 -- | Expressions are clumsily organized as of now into three types:
 --   
@@ -36,6 +38,27 @@ data Expression a v
   , Foldable
   , Traversable
   )
+
+-- | Recursively traverse all of the free references in an expression.
+references :: Applicative f => ((a, v) -> f (a, v))
+  -> Expression a v -> f (Expression a v)
+references f (Reference a v) = uncurry Reference <$> f (a, v)
+references f (Lambda a m) = Lambda a <$> references (altered f) m
+  where
+    altered :: Applicative f => ((a, v) -> f (a, v))
+      -> (a, Maybe v) -> f (a, Maybe v)
+    altered _ a@(_, Nothing) = pure a
+    altered f (a, Just b) = fmap (fmap Just) $ f (a, b)
+references f (Application e e') = Application
+  <$> references f e <*> references f e'
+
+-- | Traverse all the annotations in an expression.
+annotations :: Applicative f => (a -> f b)
+  -> Expression a v -> f (Expression b v)
+annotations f (Reference a v) = Reference <$> f a <*> pure v
+annotations f (Lambda a e) = Lambda <$> f a <*> annotations f e
+annotations f (Application e e') = Application
+  <$> annotations f e <*> annotations f e'
 
 -- | We have two semantically distinct types of identifiers in coatl,
 --   names and operators. This type distinguishes them.
