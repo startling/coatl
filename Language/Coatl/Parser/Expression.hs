@@ -93,7 +93,7 @@ single :: DeltaParsing f
   => (Expression Span Identifier -> Expression Span v)
   -> f v -> f (Expression Span v)
 single l f =
-      (\(r :~ s) -> Reference s r) <$> spanned f
+      try ((\(r :~ s) -> Reference s r) <$> spanned f)
   <|> lambda l f
   <|> parens (inner l f)
 
