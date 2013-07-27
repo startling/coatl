@@ -47,6 +47,9 @@ graphs =
           , (5, [6])
           , (6, [7])
           , (7, [5])
+          , (8, [9])
+          , (9, [8, 10])
+          , (10, [9])
           ]
     describe "path" $ do
       it "finds direct paths" $ do
@@ -76,6 +79,9 @@ graphs =
         cycles graph `shouldSatisfy` (elem [1])
       it "finds ordinary cycles" $ do
         cycles graph `shouldSatisfy` any (`elem` rotations [5, 6, 7])
+      it "finds joined cycles" $ do
+        cycles graph `shouldSatisfy` any (`elem` rotations [8, 9])
+        cycles graph `shouldSatisfy` any (`elem` rotations [9, 10])
       it "doesn't find non-cycles" $ do
         cycles graph `shouldSatisfy`all (`notElem` rotations [2, 3, 4])
     where
