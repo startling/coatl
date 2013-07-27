@@ -1,7 +1,6 @@
 -- | Some functions on directed graphs.
 module Language.Coatl.Graph where
 -- base
-import Control.Monad
 import Data.Maybe
 -- containers
 import Data.Map (Map)
@@ -28,7 +27,7 @@ connections = Graph . M.fromList . map (fmap S.fromList)
 --  Note that this does not consider a path to exist between a
 --  node and itself unless there is an explicit connection between them.
 path :: Ord k => Graph k -> k -> k -> Bool
-path (Graph m) k t = evalState (loop m t k) (S.fromList . M.keys $ m)
+path (Graph g) s e = evalState (loop g e s) (S.fromList . M.keys $ g)
   where
     anyM :: Monad m => [m Bool] -> m Bool
     anyM [] = return False
@@ -51,8 +50,8 @@ path (Graph m) k t = evalState (loop m t k) (S.fromList . M.keys $ m)
 -- | Find all the cycles in a 'Graph k'. This is a modification
 --   of Tarjan's algorithm for finding strongly-connected components.
 cycles :: Ord k => Graph k -> [[k]]
-cycles (Graph m) = snd $ execRWS
-  (mapM_ (each' m) (M.keys m)) [] S.empty where
+cycles (Graph g) = snd $ execRWS
+  (mapM_ (each' g) (M.keys g)) [] S.empty where
     each' m k = get >>= \visited ->  do
       -- This thing has been visited.
       modify $ S.insert k
@@ -60,7 +59,7 @@ cycles (Graph m) = snd $ execRWS
       stack <- ask
       case span (/= k) stack of
         -- If it isn't...
-        (as, []) -> if S.member k visited
+        (_, []) -> if S.member k visited
           -- ...and this is not the first time visiting this, return.
           then return ()
           -- ...and this is the first time visiting this, push it to
@@ -68,4 +67,4 @@ cycles (Graph m) = snd $ execRWS
           else local (k :) $ mapM_ (each' m)
             (maybe [] S.toList . M.lookup k $ m)
         -- Write the cycle we found.
-        (as, (_:bs)) -> tell [k : reverse as]
+        (as, _) -> tell [k : reverse as]
