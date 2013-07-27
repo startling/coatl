@@ -9,6 +9,7 @@ import Test.Hspec
 -- coatl
 import Language.Coatl.Abstract
 import Language.Coatl.Parser.Expression (expression)
+import Language.Coatl.Graph
 import Language.Coatl.Check
 
 shouldParse :: Show a => Parser a -> String -> Expectation
@@ -34,6 +35,43 @@ expressions =
         expression `shouldParse` "Type ~ {a => a -> a}"
       it "parses ordinary application" $ do
         expression `shouldParse` "traverse pure"
+
+graphs =
+  describe "Language.Coatl.Graph" $ do
+    let graph = connections
+          [ (1, [1, 2])
+          , (2, [3])
+          , (3, [4])
+          , (4, [])
+          ]
+    describe "path" $ do
+      it "finds direct paths" $ do
+        path graph 1 2 `shouldBe` True
+        path graph 3 4 `shouldBe` True
+      it "finds indirect paths" $ do
+        path graph 3 4 `shouldBe` True
+        path graph 1 3 `shouldBe` True
+        path graph 1 4 `shouldBe` True
+      it "does not find nonexistent paths" $ do
+        path graph 4 3 `shouldBe` False
+        path graph 4 2 `shouldBe` False
+        path graph 4 1 `shouldBe` False
+        path graph 3 2 `shouldBe` False
+        path graph 3 1 `shouldBe` False
+        path graph 2 1 `shouldBe` False
+      it "finds paths from a node to itself only when appropriate" $ do
+        path graph 1 1 `shouldBe` True
+        path graph 2 2 `shouldBe` False
+        path graph 3 3 `shouldBe` False
+      it "does not get confused by loops" $ do
+        let graph' = connections
+              [ (1, [2])
+              , (2, [3])
+              , (3, [1])
+              ]
+        path graph' 1 1 `shouldBe` True
+        path graph' 2 1 `shouldBe` True
+        path graph' 3 2 `shouldBe` True
 
 checks =
   describe "Language.Coatl.Check" $ do
@@ -76,5 +114,6 @@ checks =
 main :: IO ()
 main = hspec . sequence_ $
   [ expressions
+  , graphs
   , checks
   ]
