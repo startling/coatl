@@ -41,14 +41,23 @@
 module Language.Coatl.Check where
 -- base
 import Control.Applicative
+import Data.Either
 import Data.Foldable (toList)
 import Data.Monoid
+import qualified Data.Traversable as T
 -- containers
 import Data.Map (Map)
 import qualified Data.Map as M
+-- transformers
+import Control.Monad.Error
+import Control.Monad.Identity
 -- mtl
 import Control.Monad.Trans
 import Control.Monad.Reader
+-- either
+import Control.Monad.Trans.Either
+-- lens
+import Control.Lens
 -- trifecta
 import Text.Trifecta
 -- coatl
@@ -76,6 +85,7 @@ canonicalize (Operator "~") = Dependent
 canonicalize (Name "Type") = Type
 canonicalize o = Simple o
 
+-- | A type representing the things in our checking environment.
 data Env = Env
   { _assumptions :: Map Canonical (Expression () Canonical)
   } deriving
@@ -83,18 +93,26 @@ data Env = Env
   , Show
   )
 
-newtype EnvironmentT m a = EnvironmentT (ReaderT Env m a)
+-- | A monad representing the context we need when checking things.
+newtype EnvironmentT m a = EnvironmentT
+    (ReaderT Env (EitherT [String] m) a)
   deriving
   ( Functor
   , Applicative
   , Monad
   , MonadReader Env
-  , MonadTrans
+  , MonadError [String]
   )
 
+type Environment = EnvironmentT Identity
+
 -- | Evaluate an environment-dependent action.
-runEnvironmentT :: EnvironmentT m a -> m a
-runEnvironmentT (EnvironmentT r) = runReaderT r (Env mempty)
+runEnvironmentT :: EnvironmentT m a -> m (Either [String] a)
+runEnvironmentT (EnvironmentT r) = runEitherT $ runReaderT r (Env mempty)
+
+-- | Evaluate an environment-dependent action.
+runEnvironment :: Environment a -> Either [String] a
+runEnvironment = runIdentity . runEnvironmentT
 
 -- | Run an environment-dependant action with an addition to the environment.
 assuming :: Monad m => [(Canonical, Expression () Canonical)]
@@ -127,3 +145,24 @@ standard =
     function = Reference () Function
     dependent :: Expression () Canonical
     dependent = Reference () Dependent
+
+-- | Run a number of 'EitherT e m b' with the same error state,
+--   'mappend' the errors together, and throw the result.
+collectErrors ::
+  ( Traversable t
+  , Monoid e
+  , MonadError e m
+  ) => (a -> EitherT e m b) -> t a -> m (t b)
+collectErrors f es = T.mapM (runEitherT . f) es
+  >>= \xs -> case traverse id xs of
+    Left _ -> throwError . mconcat . lefts $ toList xs
+    Right r -> return r
+
+-- | Check that all the references in an expression exist.
+checkNames :: Monad m => Expression a Canonical -> EnvironmentT m ()
+checkNames e = (>> return ())
+  . collectErrors id . (`map` toListOf references e)
+    $ \(a, v) -> ask >>= \m -> if M.member v (_assumptions m)
+      then return ()
+      else throwError ["Unknown name: " ++ show v]
+
