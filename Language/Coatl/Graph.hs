@@ -56,7 +56,7 @@ path (Graph m) k t = evalState (loop m t k) (S.fromList . M.keys $ m)
 
 -- | Find all the cycles in a 'Graph k'. This is a modification
 --   of Tarjan's algorithm for finding strongly-connected components.
-cycles :: Ord k => Graph k -> [[k]]
+cycles :: Show k => Ord k => Graph k -> [[k]]
 cycles (Graph m) = execWriter $ runStateT
   (mapM_ (each' m) (M.keys m)) ([], S.empty) where
     each' m k = get >>= \(stack, visited) ->  do
@@ -72,5 +72,10 @@ cycles (Graph m) = execWriter $ runStateT
           -- the stack and try each of its neighbors.
           else _1 %= (k :) >> mapM_ (each' m)
             (maybe [] S.toList . M.lookup k $ m)
+            -- If the thing we pushed is still on top of the stack,
+            -- take it off.
+            >> _1 %= (\s -> case s of
+              [] -> []
+              (b : bs) -> if b == k then bs else b : bs)
         -- Shorten the stack and write the cycle.
         (as, (_:bs)) -> _1 .= bs >> tell [k : reverse as]
