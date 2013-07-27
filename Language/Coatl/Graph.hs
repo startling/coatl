@@ -1,10 +1,8 @@
 -- | Some functions on directed graphs.
 module Language.Coatl.Graph where
 -- base
-import Control.Applicative
 import Control.Monad
 import Data.Maybe
-import Data.Traversable as T
 -- containers
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -12,11 +10,7 @@ import Data.Set (Set)
 import qualified Data.Set as S
 -- mtl
 import Control.Monad.State
-import Control.Monad.Writer
--- lens
-import Control.Lens
-
-import Debug.Trace
+import Control.Monad.RWS
 
 newtype Graph k = Graph
   (Map k (Set k))
@@ -56,13 +50,14 @@ path (Graph m) k t = evalState (loop m t k) (S.fromList . M.keys $ m)
 
 -- | Find all the cycles in a 'Graph k'. This is a modification
 --   of Tarjan's algorithm for finding strongly-connected components.
-cycles :: Show k => Ord k => Graph k -> [[k]]
-cycles (Graph m) = execWriter $ runStateT
-  (mapM_ (each' m) (M.keys m)) ([], S.empty) where
-    each' m k = get >>= \(stack, visited) ->  do
+cycles :: Ord k => Graph k -> [[k]]
+cycles (Graph m) = snd $ execRWS
+  (mapM_ (each' m) (M.keys m)) [] S.empty where
+    each' m k = get >>= \visited ->  do
       -- This thing has been visited.
-      _2 %= S.insert k
+      modify $ S.insert k
       -- Check whether this thing is in the stack already.
+      stack <- ask
       case span (/= k) stack of
         -- If it isn't...
         (as, []) -> if S.member k visited
@@ -70,12 +65,7 @@ cycles (Graph m) = execWriter $ runStateT
           then return ()
           -- ...and this is the first time visiting this, push it to
           -- the stack and try each of its neighbors.
-          else _1 %= (k :) >> mapM_ (each' m)
+          else local (k :) $ mapM_ (each' m)
             (maybe [] S.toList . M.lookup k $ m)
-            -- If the thing we pushed is still on top of the stack,
-            -- take it off.
-            >> _1 %= (\s -> case s of
-              [] -> []
-              (b : bs) -> if b == k then bs else b : bs)
-        -- Shorten the stack and write the cycle.
-        (as, (_:bs)) -> _1 .= bs >> tell [k : reverse as]
+        -- Write the cycle we found.
+        (as, (_:bs)) -> tell [k : reverse as]
