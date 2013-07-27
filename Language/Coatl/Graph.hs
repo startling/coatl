@@ -12,6 +12,8 @@ import Control.Monad.State
 import Control.Monad.Writer
 import Control.Monad.RWS
 
+-- | A directed graph consists of a set of elements and, for each,
+--   a set of connections leading from that element.
 newtype Graph k = Graph
   (Map k (Set k))
   deriving
@@ -19,7 +21,7 @@ newtype Graph k = Graph
   , Show
   )
 
--- | Create a graph from a list of connections.
+-- | Create a graph from a list of elements and connections.
 connections :: Ord k => [(k, [k])] -> Graph k
 connections = Graph . M.fromList . map (fmap S.fromList)
 
@@ -30,9 +32,14 @@ connections = Graph . M.fromList . map (fmap S.fromList)
 path :: Ord k => Graph k -> k -> k -> Bool
 path (Graph g) s e = evalState (loop g e s) (S.fromList . M.keys $ g)
   where
+    -- Return 'True' if any of the actions in a list evaluate to
+    -- 'True'. This looks a little silly but it's necessary in State
+    -- so we don't accidentally evaluate everything.
     anyM :: Monad m => [m Bool] -> m Bool
     anyM [] = return False
     anyM (a : as) = a >>= \x -> if x then return x else anyM as
+    -- Look through all the neighbors of a node to tell whether
+    -- there exists a path from the node to the target.
     loop :: Ord k => Map k (Set k) -> k -> k -> State (Set k) Bool
     loop m t k = get >>= \unvisited -> do
       -- Remove this from "unvisited".
@@ -52,12 +59,12 @@ path (Graph g) s e = evalState (loop g e s) (S.fromList . M.keys $ g)
 --   of Tarjan's algorithm for finding strongly-connected components.
 cycles :: Ord k => Graph k -> [[k]]
 cycles (Graph g) = snd $ execRWS
-  (mapM_ (each' g) (M.keys g)) [] S.empty where
-    each' m k = get >>= \visited ->  do
+  (mapM_ each' (M.keys g)) (g, []) S.empty where
+    each' k = get >>= \visited ->  do
       -- This thing has been visited.
       modify $ S.insert k
       -- Check whether this thing is in the stack already.
-      stack <- ask
+      (m, stack) <- ask
       case span (/= k) stack of
         -- If it isn't...
         (_, []) -> if S.member k visited
@@ -65,8 +72,8 @@ cycles (Graph g) = snd $ execRWS
           then return ()
           -- ...and this is the first time visiting this, push it to
           -- the stack and try each of its neighbors.
-          else local (k :) $ mapM_ (each' m)
-            (maybe [] S.toList . M.lookup k $ m)
+          else local (\(m', s) -> (m', k : s))
+            $ mapM_ each' (maybe [] S.toList . M.lookup k $ m)
         -- Write the cycle we found.
         (as, _) -> tell [k : reverse as]
 
