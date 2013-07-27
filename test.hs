@@ -44,6 +44,9 @@ graphs =
           , (2, [3])
           , (3, [4])
           , (4, [])
+          , (5, [6])
+          , (6, [7])
+          , (7, [5])
           ]
     describe "path" $ do
       it "finds direct paths" $ do
@@ -65,14 +68,24 @@ graphs =
         path graph 2 2 `shouldBe` False
         path graph 3 3 `shouldBe` False
       it "does not get confused by loops" $ do
-        let graph' = connections
-              [ (1, [2])
-              , (2, [3])
-              , (3, [1])
-              ]
-        path graph' 1 1 `shouldBe` True
-        path graph' 2 1 `shouldBe` True
-        path graph' 3 2 `shouldBe` True
+        path graph 5 5 `shouldBe` True
+        path graph 6 5 `shouldBe` True
+        path graph 7 6 `shouldBe` True
+    describe "cycles" $ do
+      it "finds single-element cycles" $ do
+        cycles graph `shouldSatisfy` (elem [1])
+      it "finds ordinary cycles" $ do
+        cycles graph `shouldSatisfy` any (`elem` rotations [5, 6, 7])
+      it "doesn't find non-cycles" $ do
+        cycles graph `shouldSatisfy`all (`notElem` rotations [2, 3, 4])
+    where
+      rotations :: [a] -> [[a]]
+      rotations s = rotations' (length s) s
+      rotations' :: Int -> [a] -> [[a]]
+      rotations' 0 _ = []
+      rotations' _ [] = []
+      rotations' n (a : as) = let new = as ++ [a]
+        in new : rotations' (n - 1) new
 
 checks =
   describe "Language.Coatl.Check" $ do
