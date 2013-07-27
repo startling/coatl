@@ -62,6 +62,7 @@ import Control.Lens
 import Text.Trifecta
 -- coatl
 import Language.Coatl.Abstract
+import Language.Coatl.Graph
 
 -- | A canonical identifier is either a reference to another part of the
 --   program or one of the internal values: (~), (->), or Type. 
@@ -167,4 +168,16 @@ checkNames cs e = (>> return ())
     $ \(a, v) -> ask >>= \m -> if M.member v (_assumptions m)
       || v `elem` cs then return ()
         else throwError ["Unknown name: " ++ show v]
+
+-- | Conservatively check for partiality: if a declaration references
+--   anything that references itself, throw an error.
+--
+--   This should probably be improved eventually.
+checkTotality :: Monad m => [(Canonical, Expression a Canonical)]
+  -> Canonical -> EnvironmentT m ()
+checkTotality cs c = let
+  graph = map (fmap $ map snd . toListOf references) cs
+  in if path (connections graph) c c
+    then throwError [show c ++ " references itself."]
+    else return ()
 

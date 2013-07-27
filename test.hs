@@ -2,6 +2,7 @@ module Main where
 -- base
 import Data.Monoid
 import Control.Applicative
+import Control.Monad
 -- trifecta
 import Text.Trifecta
 -- hspec
@@ -96,6 +97,33 @@ checks =
             , Simple $ Name "Nat"
             , Simple $ Name "the"
             ] . snd $ example
+    describe "checkTotality" $ do
+      it "errors for trivially unproductively-recursive functions" $ do
+        let bottom = declaration "Type ~ {a => a}" "bottom"
+        shouldError . checkTotality [(Simple $ Name "bottom", snd bottom)]
+          $ Simple $ Name "bottom"
+      it "should not error for `the`'s or `example`'s types" $ do
+        shouldn'tError . forM
+          [ Simple $ Name "the"
+          , Simple $ Name "example"
+          ] $ checkTotality
+          [ (Simple $ Name "the", fst the)
+          , (Simple $ Name "example", fst example)
+          ]
+      it "should not error for `the`'s or `example`'s RHS" $ do
+        shouldn'tError . forM
+          [ Simple $ Name "the"
+          , Simple $ Name "example"
+          ] $ checkTotality
+          [ (Simple $ Name "the", snd the)
+          , (Simple $ Name "example", snd example)
+          ]
+      it "doesn't error for 'x = const O x'" $ do
+        pendingWith "is this kind of thing worth the effort?"
+        let x = declaration "Nat" "const O x"
+        shouldn'tError . checkTotality 
+          [ (Simple $ Name "x", snd x)
+          ] $ Simple $ Name "x"
   where
     shouldError :: Show a => Environment a -> Expectation
     shouldError m = shouldSatisfy (runEnvironment m)
