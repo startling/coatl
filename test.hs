@@ -3,6 +3,9 @@ module Main where
 import Data.Monoid
 import Control.Applicative
 import Control.Monad
+-- containers
+import Data.Set (Set)
+import qualified Data.Set as S
 -- trifecta
 import Text.Trifecta
 -- hspec
@@ -85,6 +88,25 @@ graphs =
         cs `shouldSatisfy` any (`elem` rotations [9, 10])
       it "doesn't find non-cycles" $ do
         cs `shouldSatisfy` all (`notElem` rotations [2, 3, 4])
+    describe "sort" $ do
+      let
+        directed = connections
+          [ (1, [2, 3])
+          , (2, [4])
+          , (3, [])
+          , (4, [5])
+          , (5, [])
+          ]
+        sg = either (error . show) id $ sort directed
+      it "sorts nodes before their children" $ do
+        sg `shouldSatisfy` (5 `before` 4)
+        sg `shouldSatisfy` (5 `before` 2)
+        sg `shouldSatisfy` (5 `before` 1)
+        sg `shouldSatisfy` (3 `before` 4)
+        sg `shouldSatisfy` (3 `before` 2)
+        sg `shouldSatisfy` (3 `before` 1)
+        sg `shouldSatisfy` (4 `before` 2)
+        sg `shouldSatisfy` (2 `before` 1)
     where
       rotations :: [a] -> [[a]]
       rotations s = rotations' (length s) s
@@ -93,6 +115,12 @@ graphs =
       rotations' _ [] = []
       rotations' n (a : as) = let new = as ++ [a]
         in new : rotations' (n - 1) new
+      before :: Ord a => a -> a -> [Set a] -> Bool
+      before a b [] = False
+      before a b (s : ss) = if S.member b s then False
+        else if S.member a s then True else before a b ss
+
+
 
 checks =
   describe "Language.Coatl.Check" $ do
