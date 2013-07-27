@@ -75,15 +75,16 @@ graphs =
         path graph 6 5 `shouldBe` True
         path graph 7 6 `shouldBe` True
     describe "cycles" $ do
+      let cs = cycles graph
       it "finds single-element cycles" $ do
-        cycles graph `shouldSatisfy` (elem [1])
+        cs `shouldSatisfy` (elem [1])
       it "finds ordinary cycles" $ do
-        cycles graph `shouldSatisfy` any (`elem` rotations [5, 6, 7])
+        cs `shouldSatisfy` any (`elem` rotations [5, 6, 7])
       it "finds joined cycles" $ do
-        cycles graph `shouldSatisfy` any (`elem` rotations [8, 9])
-        cycles graph `shouldSatisfy` any (`elem` rotations [9, 10])
+        cs `shouldSatisfy` any (`elem` rotations [8, 9])
+        cs `shouldSatisfy` any (`elem` rotations [9, 10])
       it "doesn't find non-cycles" $ do
-        cycles graph `shouldSatisfy`all (`notElem` rotations [2, 3, 4])
+        cs `shouldSatisfy` all (`notElem` rotations [2, 3, 4])
     where
       rotations :: [a] -> [[a]]
       rotations s = rotations' (length s) s
