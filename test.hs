@@ -42,15 +42,22 @@ checks =
       example = declaration "the Type Nat" "the Nat O"
     describe "checkNames" $ do
       it "errors for `the`'s type without the standard assumptions" $ do
-        shouldError . checkNames . fst $ the
+        shouldError . checkNames [] . fst $ the
       it "does not error for `the`'s type with standard assumptions" $ do
-        shouldn'tError . assuming standard . checkNames . fst $ the
+        shouldn'tError . assuming standard . checkNames [] . fst $ the
       it "does not error for `the`'s RHS" $ do
-        shouldn'tError . checkNames . snd $ the
+        shouldn'tError . checkNames [] . snd $ the
       it "errors for `example`'s type" $ do
-        shouldError . checkNames . fst $ example
-      it "errors for `examle`'s RHS" $ do
-        shouldError . checkNames . snd $ example
+        shouldError . checkNames [] . fst $ example
+      it "errors for `example`'s RHS" $ do
+        shouldError . checkNames [] . snd $ example
+      it "does not error for `example`'s RHS given appropriate arguments" $ do
+        shouldn'tError . assuming standard
+          . checkNames
+            [ Simple $ Name "O"
+            , Simple $ Name "Nat"
+            , Simple $ Name "the"
+            ] . snd $ example
   where
     shouldError :: Show a => Environment a -> Expectation
     shouldError m = shouldSatisfy (runEnvironment m)

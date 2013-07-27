@@ -158,11 +158,13 @@ collectErrors f es = T.mapM (runEitherT . f) es
     Left _ -> throwError . mconcat . lefts $ toList xs
     Right r -> return r
 
--- | Check that all the references in an expression exist.
-checkNames :: Monad m => Expression a Canonical -> EnvironmentT m ()
-checkNames e = (>> return ())
+-- | Check that all the references in an expression exist either
+--   in the environment or in a given list.
+checkNames :: Monad m => [Canonical]
+  -> Expression a Canonical -> EnvironmentT m ()
+checkNames cs e = (>> return ())
   . collectErrors id . (`map` toListOf references e)
     $ \(a, v) -> ask >>= \m -> if M.member v (_assumptions m)
-      then return ()
-      else throwError ["Unknown name: " ++ show v]
+      || v `elem` cs then return ()
+        else throwError ["Unknown name: " ++ show v]
 
