@@ -9,6 +9,7 @@ import Data.Set (Set)
 import qualified Data.Set as S
 -- mtl
 import Control.Monad.State
+import Control.Monad.Writer
 import Control.Monad.RWS
 
 newtype Graph k = Graph
@@ -68,3 +69,21 @@ cycles (Graph g) = snd $ execRWS
             (maybe [] S.toList . M.lookup k $ m)
         -- Write the cycle we found.
         (as, _) -> tell [k : reverse as]
+
+-- | Topologically sort a 'Graph k'. This may fail with a list of
+--   cycles if the graph is cyclic.
+sort :: Ord k => Graph k -> Either [[k]] [Set k]
+sort g = let cs = cycles g in
+  if not $ null cs then Left cs
+    else Right . snd $ execRWS new g S.empty
+  where
+    -- Find the nodes only depending on the given set of nodes.
+    only :: Ord k => Graph k -> Set k -> Set k
+    only (Graph n) s = S.fromList . map fst
+      . filter ((`S.isSubsetOf` s) . snd) $ M.toList n
+    -- Find the nodes that only depend on the nodes already
+    -- checked and that have not been already checked.
+    new = get >>= \already -> ask >>= \g'->
+      let as = only g' already `S.difference` already in
+        if S.null as then return ()
+          else put (as `S.union` already) >> tell [as] >> new
