@@ -70,3 +70,16 @@ data Identifier
   , Ord
   , Show
   )
+
+-- | A type for declarations.
+data Declaration a v = Declaration
+  { _lhs   :: v
+  , _rhs   :: Expression a v
+  , _type_ :: Expression a v
+  } deriving
+  ( Eq
+  , Show
+  , Functor
+  , Foldable
+  , Traversable
+  )
