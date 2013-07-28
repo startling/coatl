@@ -42,7 +42,7 @@ module Language.Coatl.Check where
 -- base
 import Control.Applicative
 import Data.Either
-import Data.Foldable (toList)
+import Data.Foldable (toList, traverse_, Foldable)
 import Data.Monoid
 import qualified Data.Traversable as T
 -- containers
@@ -145,22 +145,19 @@ standard =
 
 -- | Run a number of 'EitherT e m b' with the same error state,
 --   'mappend' the errors together, and throw the result.
-collectErrors ::
-  ( Traversable t
-  , Monoid e
-  , MonadError e m
-  ) => (a -> EitherT e m b) -> t a -> m (t b)
-collectErrors f es = T.mapM (runEitherT . f) es
-  >>= \xs -> case traverse id xs of
-    Left _ -> throwError . mconcat . lefts $ toList xs
-    Right r -> return r
+collect :: (Foldable t , Monoid e , MonadError e m)
+  => (a -> EitherT e m b) -> t a -> m ()
+collect f = mapM (runEitherT . f) . toList
+  >=> \e -> let ls = lefts e in
+    if null ls then return ()
+      else throwError (mconcat ls)
 
 -- | Check that all the references in an expression exist either
 --   in the environment or in a given list.
 checkNames :: Monad m => [Canonical]
   -> Expression a Canonical -> EnvironmentT m ()
 checkNames cs e = (>> return ())
-  . collectErrors id . (`map` toListOf references e)
+  . collect id . (`map` toListOf references e)
     $ \(a, v) -> ask >>= \m -> if M.member v m
       || v `elem` cs then return ()
         else throwError ["Unknown name: " ++ show v]
