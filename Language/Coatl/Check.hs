@@ -87,21 +87,16 @@ canonicalize (Name "Type") = Type
 canonicalize o = Simple o
 
 -- | A type representing the things in our checking environment.
-data Env = Env
-  { _assumptions :: Map Canonical (Expression () Canonical)
-  } deriving
-  ( Eq
-  , Show
-  )
+type Checked = Map Canonical (Expression (Maybe Span) Canonical)
 
 -- | A monad representing the context we need when checking things.
 newtype EnvironmentT m a = EnvironmentT
-    (ReaderT Env (EitherT [String] m) a)
+    (ReaderT Checked (EitherT [String] m) a)
   deriving
   ( Functor
   , Applicative
   , Monad
-  , MonadReader Env
+  , MonadReader Checked
   , MonadError [String]
   )
 
@@ -109,17 +104,17 @@ type Environment = EnvironmentT Identity
 
 -- | Evaluate an environment-dependent action.
 runEnvironmentT :: EnvironmentT m a -> m (Either [String] a)
-runEnvironmentT (EnvironmentT r) = runEitherT $ runReaderT r (Env mempty)
+runEnvironmentT (EnvironmentT r) = runEitherT $ runReaderT r mempty
 
 -- | Evaluate an environment-dependent action.
 runEnvironment :: Environment a -> Either [String] a
 runEnvironment = runIdentity . runEnvironmentT
 
 -- | Run an environment-dependant action with an addition to the environment.
-assuming :: Monad m => [(Canonical, Expression () Canonical)]
+assuming :: Monad m
+  => [(Canonical, Expression (Maybe Span) Canonical)]
   -> EnvironmentT m a -> EnvironmentT m a
-assuming as = local $ \e -> e
-  { _assumptions = _assumptions e <> M.fromList as }
+assuming as = local $ \e -> e <> M.fromList as
 
 -- | The standard environment. We have the following types:
 --
@@ -128,24 +123,25 @@ assuming as = local $ \e -> e
 --    (->) : Type -> Type -> Type
 --    (~)  : Type ~ { a => (a -> Type) -> Type }
 --  @
-standard :: [(Canonical, Expression () Canonical)]
+standard :: [(Canonical, Expression (Maybe a) Canonical)]
 standard =
   [ (Type, type_)
   , (Function, binary function type_ type_)
   , (Dependent, binary dependent type_
-      . Lambda ()
+      . Lambda Nothing
         . binary (Just <$> function)
-          (binary (Just <$> function) (Reference () Nothing) (Just <$> type_))
-            $ Just <$> type_ )
+          (binary (Just <$> function)
+            (Reference Nothing Nothing) (Just <$> type_))
+             $ Just <$> type_ )
   ]
   where
     binary a b c = Application (Application a b) c
-    type_ :: Expression () Canonical
-    type_ = Reference () Type
-    function :: Expression () Canonical
-    function = Reference () Function
-    dependent :: Expression () Canonical
-    dependent = Reference () Dependent
+    type_ :: Expression (Maybe a) Canonical
+    type_ = Reference Nothing Type
+    function :: Expression (Maybe a) Canonical
+    function = Reference Nothing Function
+    dependent :: Expression (Maybe a) Canonical
+    dependent = Reference (Nothing) Dependent
 
 -- | Run a number of 'EitherT e m b' with the same error state,
 --   'mappend' the errors together, and throw the result.
@@ -165,7 +161,7 @@ checkNames :: Monad m => [Canonical]
   -> Expression a Canonical -> EnvironmentT m ()
 checkNames cs e = (>> return ())
   . collectErrors id . (`map` toListOf references e)
-    $ \(a, v) -> ask >>= \m -> if M.member v (_assumptions m)
+    $ \(a, v) -> ask >>= \m -> if M.member v m
       || v `elem` cs then return ()
         else throwError ["Unknown name: " ++ show v]
 
@@ -180,4 +176,3 @@ checkTotality cs c = let
   in if path (connections graph) c c
     then throwError [show c ++ " references itself."]
     else return ()
-
