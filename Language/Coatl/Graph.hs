@@ -1,7 +1,9 @@
+{-# Language Rank2Types #-}
 -- | Some functions on directed graphs.
 module Language.Coatl.Graph where
 -- base
 import Data.Maybe
+import Control.Applicative
 -- containers
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -11,86 +13,88 @@ import qualified Data.Set as S
 import Control.Monad.State
 import Control.Monad.Writer
 import Control.Monad.RWS
+-- lens
+import Control.Lens
 
--- | A directed graph consists of a set of elements and, for each,
---   a set of connections leading from that element.
-newtype Graph k = Graph
-  (Map k (Set k))
-  deriving
-  ( Eq
-  , Show
-  )
+data Graph k n = Graph
+  { arcs  :: Fold n k
+  , nodes :: Map k n
+  }
 
--- | Create a graph from a list of elements and connections.
-connections :: Ord k => [(k, [k])] -> Graph k
-connections = Graph . M.fromList . map (fmap S.fromList)
+-- | Create a 'Graph' from some association list of identifiers to
+--   lists of other identifiers.
+connections :: Ord k => [(k, [k])] -> Graph k [k]
+connections = Graph folded . M.fromList
+
+-- | Fold over the IDs of the nodes pointed to by the node at some ID.
+next :: Ord k => Graph k n -> Fold k k
+next (Graph a n) f k = maybe (pure k) (k <$)
+  . fmap (a f) . M.lookup k $ n
 
 -- | Check if there exists a path between two nodes in the graph.
 -- 
 --  Note that this does not consider a path to exist between a
 --  node and itself unless there is an explicit connection between them.
-path :: Ord k => Graph k -> k -> k -> Bool
-path (Graph g) s e = evalState (loop g e s) (S.fromList . M.keys $ g)
-  where
+path :: Ord k => Graph k a -> k -> k -> Bool
+path g@(Graph a n) s e = evalState (loop s)
+  (S.fromList . M.keys $ n) where
     -- Return 'True' if any of the actions in a list evaluate to
     -- 'True'. This looks a little silly but it's necessary in State
     -- so we don't accidentally evaluate everything.
     anyM :: Monad m => [m Bool] -> m Bool
     anyM [] = return False
     anyM (a : as) = a >>= \x -> if x then return x else anyM as
-    -- Look through all the neighbors of a node to tell whether
+    -- Look through all the next of a node to tell whether
     -- there exists a path from the node to the target.
-    loop :: Ord k => Map k (Set k) -> k -> k -> State (Set k) Bool
-    loop m t k = get >>= \unvisited -> do
-      -- Remove this from "unvisited".
+    loop k = get >>= \unvisited -> do
+      -- Remove this from the set of unvisited nodes.
       put $ S.delete k unvisited
-      -- Get all the neighbors.
-      let neighbors = fromMaybe S.empty $ M.lookup k m
-      -- If the target is in here, great!
-      if S.member t neighbors then return True else do
-        -- Figure out which neighbors have not been checked yet.
-        let toCheck = S.intersection neighbors unvisited
-        -- If this is empty, there is no path here. If not,
-        -- check all the unchecked neighbors.
-        if S.null toCheck then return False else
-          anyM . map (loop m t) $ S.toList toCheck
+      -- If the target is in here, then great!
+      if elemOf (next g) e k then return True else do
+        -- Otherwise, check if there exists a path from any
+        -- neighbor we have not checked before.
+        anyM . map loop . toListOf
+          (filtered (`S.member` unvisited) . next g) $ k
 
 -- | Find all the cycles in a 'Graph k'. This is a modification
 --   of Tarjan's algorithm for finding strongly-connected components.
-cycles :: Ord k => Graph k -> [[k]]
-cycles (Graph g) = snd $ execRWS
-  (mapM_ each' (M.keys g)) (g, []) S.empty where
+cycles :: Ord k => Graph k a -> [[k]]
+cycles g@(Graph a n) = snd $ execRWS
+  (mapM_ each' (M.keys n)) [] S.empty where
     each' k = get >>= \visited ->  do
       -- This thing has been visited.
       modify $ S.insert k
       -- Check whether this thing is in the stack already.
-      (m, stack) <- ask
+      stack <- ask
       case span (/= k) stack of
         -- If it isn't...
         (_, []) -> if S.member k visited
           -- ...and this is not the first time visiting this, return.
           then return ()
           -- ...and this is the first time visiting this, push it to
-          -- the stack and try each of its neighbors.
-          else local (\(m', s) -> (m', k : s))
-            $ mapM_ each' (maybe [] S.toList . M.lookup k $ m)
+          -- the stack and try each of its next.
+          else local (k :) $ mapMOf_ (next g) each' k
         -- Write the cycle we found.
-        (as, _) -> tell [k : reverse as]
+        (as, (top : _)) -> tell [top : reverse as]
 
 -- | Topologically sort a 'Graph k'. This may fail with a list of
 --   cycles if the graph is cyclic.
-sort :: Ord k => Graph k -> Either [[k]] [Set k]
+sort :: Ord k => Graph k a -> Either [[k]] [Set k]
 sort g = let cs = cycles g in
   if not $ null cs then Left cs
     else Right . snd $ execRWS new g S.empty
   where
-    -- Find the nodes only depending on the given set of nodes.
-    only :: Ord k => Graph k -> Set k -> Set k
-    only (Graph n) s = S.fromList . map fst
-      . filter ((`S.isSubsetOf` s) . snd) $ M.toList n
+    -- Fold over the identifiers whose nodes only point to
+    -- the given identifiers and that are not one of them.
+    only :: Ord k => Graph k a -> Set k -> Fold k k
+    only g s = filtered (`S.notMember` s)
+      . filtered (allOf (next g) (flip S.member s))
+    -- Fold over the things no
     -- Find the nodes that only depend on the nodes already
     -- checked and that have not been already checked.
-    new = get >>= \already -> ask >>= \g'->
-      let as = only g' already `S.difference` already in
-        if S.null as then return ()
-          else put (as `S.union` already) >> tell [as] >> new
+    new = get >>= \already -> let
+      as = S.fromList . toListOf (folded . only g already)
+        . M.keys . nodes $ g in
+          if S.null as then return ()
+            else put (as `S.union` already) >> tell [as] >> new
+
