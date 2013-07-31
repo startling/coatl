@@ -1,12 +1,15 @@
 {-# Language DeriveFunctor #-}
 {-# Language DeriveFoldable #-}
 {-# Language DeriveTraversable #-}
+{-# Language TemplateHaskell #-}
 module Language.Coatl.Abstract where
 -- base
 import Control.Applicative
 import Data.Foldable (Foldable(..))
 import Data.Traversable (Traversable(..))
 import Data.Maybe
+-- lens
+import Control.Lens
 
 -- | Expressions are clumsily organized as of now into three types:
 --   
@@ -72,9 +75,15 @@ data Identifier
   )
 
 -- | A type for declarations.
-data Declaration a v = Declaration
-  { _lhs   :: v
+data Declaration a v
+  = Value
+  { _label :: a
+  , _lhs   :: v
   , _rhs   :: Expression a v
+  }
+  | Signature
+  { _label :: a
+  , _lhs   :: v
   , _type_ :: Expression a v
   } deriving
   ( Eq
@@ -83,3 +92,5 @@ data Declaration a v = Declaration
   , Foldable
   , Traversable
   )
+makeLenses ''Declaration
+makePrisms ''Declaration
