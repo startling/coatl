@@ -1,3 +1,4 @@
+{-# Language FlexibleContexts #-}
 {-# Language GeneralizedNewtypeDeriving #-}
 -- Say we have the following two declarations:
 --
@@ -111,9 +112,8 @@ runEnvironment :: Environment a -> Either [String] a
 runEnvironment = runIdentity . runEnvironmentT
 
 -- | Run an environment-dependant action with an addition to the environment.
-assuming :: Monad m
-  => [(Canonical, Expression (Maybe Span) Canonical)]
-  -> EnvironmentT m a -> EnvironmentT m a
+assuming :: (MonadReader Checked m, MonadError [String] m)
+  => [(Canonical, Expression (Maybe Span) Canonical)] -> m a -> m a
 assuming as = local $ \e -> e <> M.fromList as
 
 -- | The standard environment. We have the following types:
@@ -154,8 +154,8 @@ collect f = mapM (runEitherT . f) . toList
 
 -- | Check that all the references in an expression exist either
 --   in the environment or in a given list.
-checkNames :: Monad m => [Canonical]
-  -> Expression a Canonical -> EnvironmentT m ()
+checkNames :: (MonadReader Checked m, MonadError [String] m)
+  => [Canonical] -> Expression (Maybe Span) Canonical -> m ()
 checkNames cs e = (>> return ())
   . collect id . (`map` toListOf references e)
     $ \(a, v) -> ask >>= \m -> if M.member v m
@@ -166,8 +166,8 @@ checkNames cs e = (>> return ())
 --   anything that references itself, throw an error.
 --
 --   This should probably be improved eventually.
-checkTotality :: Monad m => [(Canonical, Expression a Canonical)]
-  -> Canonical -> EnvironmentT m ()
+checkTotality :: (MonadReader Checked m, MonadError [String] m)
+  => [(Canonical, Expression a Canonical)] -> Canonical -> m ()
 checkTotality cs c = let
   graph = map (fmap $ map snd . toListOf references) cs
   in if path (connections graph) c c
