@@ -42,6 +42,7 @@
 module Language.Coatl.Check where
 -- base
 import Control.Applicative
+import Control.Arrow
 import Data.Either
 import Data.Foldable (toList, traverse_, Foldable)
 import Data.Monoid
@@ -162,6 +163,26 @@ checkNames cs e = (>> return ())
       || v `elem` cs then return ()
         else throwError ["Unknown name: " ++ show v]
 
+-- | Create a graph from a list of declarations, with the provision
+--   that each value declaration depends on the corresponding type
+--   signature.
+--
+--   The identifiers in this graph have a 'Bool' placed in them --
+--   'True' if they represent a type signature and 'False' otherwise.
+--
+--   This might create spooky errors if more than one of either kind
+--   of declaration eixsts.
+asGraph :: Ord v => [Declaration a v]
+  -> Graph (Bool, v) (Declaration a v)
+asGraph = Graph deps . M.fromList .
+  map ((has _Signature &&& view lhs) &&& id) where
+    deps :: Fold (Declaration v a) (Bool, a)
+    deps f d = let
+      direct = (rhs . traverse)
+        (\x -> (x <$) . f . (,) False $ x) d in
+          if has _Value d then f (True, view lhs d) *> direct
+            else direct
+
 -- | Conservatively check for partiality: if a declaration references
 --   anything that references itself, throw an error.
 --
@@ -173,3 +194,4 @@ checkTotality cs c = let
   in if path (connections graph) c c
     then throwError [show c ++ " references itself."]
     else return ()
+
