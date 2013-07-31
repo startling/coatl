@@ -120,8 +120,6 @@ graphs =
       before a b (s : ss) = if S.member b s then False
         else if S.member a s then True else before a b ss
 
-
-
 checks =
   describe "Language.Coatl.Check" $ do
     let
