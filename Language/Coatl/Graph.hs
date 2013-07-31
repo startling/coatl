@@ -1,8 +1,11 @@
 {-# Language Rank2Types #-}
+{-# Language FlexibleInstances #-}
+{-# Language MultiParamTypeClasses #-}
 -- | Some functions on directed graphs.
 module Language.Coatl.Graph where
 -- base
 import Data.Maybe
+import Data.Foldable
 import Control.Applicative
 -- containers
 import Data.Map (Map)
@@ -21,6 +24,17 @@ data Graph k n = Graph
   , nodes :: Map k n
   }
 
+instance Foldable (Graph k) where
+  foldMap f (Graph _ n) = foldMap f n
+
+instance FoldableWithIndex k (Graph k) where
+  ifoldMap f (Graph _ n) = ifoldMap f n
+
+instance (Show k, Show n) => Show (Graph k n) where
+  show g = "connections ["
+    ++ iconcatMap (\k v -> show (k, v)) g
+    ++ "]"
+
 -- | Create a 'Graph' from some association list of identifiers to
 --   lists of other identifiers.
 connections :: Ord k => [(k, [k])] -> Graph k [k]
@@ -36,8 +50,8 @@ next (Graph a n) f k = maybe (pure k) (k <$)
 --  Note that this does not consider a path to exist between a
 --  node and itself unless there is an explicit connection between them.
 path :: Ord k => Graph k a -> k -> k -> Bool
-path g@(Graph a n) s e = evalState (loop s)
-  (S.fromList . M.keys $ n) where
+path g s e = evalState (loop s) . S.fromList
+  . toListOf (ifolded . asIndex) $ g where
     -- Return 'True' if any of the actions in a list evaluate to
     -- 'True'. This looks a little silly but it's necessary in State
     -- so we don't accidentally evaluate everything.
@@ -53,14 +67,14 @@ path g@(Graph a n) s e = evalState (loop s)
       if elemOf (next g) e k then return True else do
         -- Otherwise, check if there exists a path from any
         -- neighbor we have not checked before.
-        anyM . map loop . toListOf
-          (filtered (`S.member` unvisited) . next g) $ k
+        anyM . map loop . (`toListOf` k)
+          $ filtered (`S.member` unvisited) . next g
 
 -- | Find all the cycles in a 'Graph k'. This is a modification
 --   of Tarjan's algorithm for finding strongly-connected components.
 cycles :: Ord k => Graph k a -> [[k]]
-cycles g@(Graph a n) = snd $ execRWS
-  (mapM_ each' (M.keys n)) [] S.empty where
+cycles g  = snd $ execRWS
+  (mapMOf_ (ifolded . asIndex) each' g) [] S.empty where
     each' k = get >>= \visited ->  do
       -- This thing has been visited.
       modify $ S.insert k
@@ -88,13 +102,12 @@ sort g = let cs = cycles g in
     -- the given identifiers and that are not one of them.
     only :: Ord k => Graph k a -> Set k -> Fold k k
     only g s = filtered (`S.notMember` s)
-      . filtered (allOf (next g) (flip S.member s))
-    -- Fold over the things no
+      . filtered (next g `allOf` (`S.member` s))
     -- Find the nodes that only depend on the nodes already
     -- checked and that have not been already checked.
     new = get >>= \already -> let
       as = S.fromList . toListOf (folded . only g already)
         . M.keys . nodes $ g in
-          if S.null as then return ()
-            else put (as `S.union` already) >> tell [as] >> new
+          if S.null as then return () else
+            put (as `S.union` already) >> tell [as] >> new
 
