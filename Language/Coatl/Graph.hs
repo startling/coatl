@@ -93,21 +93,23 @@ cycles g  = snd $ execRWS
 
 -- | Topologically sort a 'Graph k'. This may fail with a list of
 --   cycles if the graph is cyclic.
-sort :: Ord k => Graph k a -> Either [[k]] [Set k]
+sort :: (Ord k, Ord a) => Graph k a -> Either [[k]] [[a]]
 sort g = let cs = cycles g in
   if not $ null cs then Left cs
     else Right . snd $ execRWS new g S.empty
   where
     -- Fold over the identifiers whose nodes only point to
     -- the given identifiers and that are not one of them.
-    only :: Ord k => Graph k a -> Set k -> Fold k k
-    only g s = filtered (`S.notMember` s)
-      . filtered (next g `allOf` (`S.member` s))
+    only' :: Ord k => Set k -> IndexedFold k (Graph k n) n
+    only' s f g@(Graph a _) = (g <$) . flip ifolded g . Indexed
+      $ \i n -> if i `S.notMember` s && allOf a (`S.member` s) n
+        then indexed f i n
+        else pure n
     -- Find the nodes that only depend on the nodes already
     -- checked and that have not been already checked.
     new = get >>= \already -> let
-      as = S.fromList . toListOf
-        (ifolded . asIndex <. only g already) $ g in
-          if S.null as then return () else
-            put (as `S.union` already) >> tell [as] >> new
+      as = itoListOf (only' already) g in
+          if null as then return () else
+            put (S.fromList (map fst as) `S.union` already)
+              >> tell [map snd as] >> new
 
