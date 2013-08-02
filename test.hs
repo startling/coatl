@@ -171,14 +171,14 @@ checks =
         pendingWith "is this kind of thing worth the effort?"
         let x = declaration "Nat" "const O x"
         shouldn'tError . checkTotality 
-          [ (Simple $ Name "x", snd x)
+          [ ( Simple $ Name "x", snd x)
           ] $ Simple $ Name "x"
   where
-    shouldError :: Show a => Environment a -> Expectation
-    shouldError m = shouldSatisfy (runEnvironment m)
+    shouldError :: Show a => WithEnvironment a -> Expectation
+    shouldError m = shouldSatisfy (withEnvironment m)
       $ \e -> case e of Left _ -> True; Right _ -> False;
-    shouldn'tError :: Show a => Environment a -> Expectation
-    shouldn'tError m = shouldSatisfy (runEnvironment m)
+    shouldn'tError :: Show a => WithEnvironment a -> Expectation
+    shouldn'tError m = shouldSatisfy (withEnvironment m)
       $ \e -> case e of Left _ -> False; Right _ -> True;
     parse :: String -> Result (Expression Span Canonical)
     parse = fmap (fmap canonicalize) . parseString expression mempty

@@ -56,6 +56,7 @@ import Control.Monad.Identity
 -- mtl
 import Control.Monad.Trans
 import Control.Monad.Reader
+import Control.Monad.State
 -- either
 import Control.Monad.Trans.Either
 -- lens
@@ -89,31 +90,27 @@ canonicalize (Name "Type") = Type
 canonicalize o = Simple o
 
 -- | A type representing the things in our checking environment.
-type Checked = Map Canonical (Expression (Maybe Span) Canonical)
+type Environment = Map Canonical (Expression (Maybe Span) Canonical)
 
--- | A monad representing the context we need when checking things.
-newtype EnvironmentT m a = EnvironmentT
-    (ReaderT Checked (EitherT [String] m) a)
-  deriving
-  ( Functor
-  , Applicative
-  , Monad
-  , MonadReader Checked
-  , MonadError [String]
-  )
+type WithEnvironmentT m a = ReaderT Environment
+  (StateT Environment (EitherT [String] m)) a
 
-type Environment = EnvironmentT Identity
+type WithEnvironment a = WithEnvironmentT Identity a
+
+-- | Evaluate an environment-dependent action in some 'Monad'.
+withEnvironmentT :: Monad m
+  => WithEnvironmentT m a -> m (Either [String] Environment)
+withEnvironmentT r = runEitherT . flip execStateT mempty 
+  $ runReaderT r mempty
 
 -- | Evaluate an environment-dependent action.
-runEnvironmentT :: EnvironmentT m a -> m (Either [String] a)
-runEnvironmentT (EnvironmentT r) = runEitherT $ runReaderT r mempty
-
--- | Evaluate an environment-dependent action.
-runEnvironment :: Environment a -> Either [String] a
-runEnvironment = runIdentity . runEnvironmentT
+withEnvironment :: WithEnvironment a -> Either [String] Environment
+withEnvironment = runIdentity . withEnvironmentT
 
 -- | Run an environment-dependant action with an addition to the environment.
-assuming :: (MonadReader Checked m, MonadError [String] m)
+assuming ::
+  ( MonadReader Environment m
+  , MonadError [String] m )
   => [(Canonical, Expression (Maybe Span) Canonical)] -> m a -> m a
 assuming as = local $ \e -> e <> M.fromList as
 
@@ -155,7 +152,9 @@ collect f = mapM (runEitherT . f) . toList
 
 -- | Check that all the references in an expression exist either
 --   in the environment or in a given list.
-checkNames :: (MonadReader Checked m, MonadError [String] m)
+checkNames ::
+  ( MonadReader Environment m
+  , MonadError [String] m )
   => [Canonical] -> Expression a Canonical -> m ()
 checkNames cs e = (>> return ())
   . collect id . (`map` toListOf references e)
@@ -186,7 +185,7 @@ asGraph = connections (has _Signature &&& view lhs) deps where
 --   anything that references itself, throw an error.
 --
 --   This should probably be improved eventually.
-checkTotality :: (MonadReader Checked m, MonadError [String] m)
+checkTotality :: (MonadReader Environment m, MonadError [String] m)
   => [(Canonical, Expression a Canonical)] -> Canonical -> m ()
 checkTotality cs c = let
   graph = map (fmap $ map snd . toListOf references) cs
