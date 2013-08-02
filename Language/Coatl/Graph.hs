@@ -106,8 +106,8 @@ sort g = let cs = cycles g in
     -- Find the nodes that only depend on the nodes already
     -- checked and that have not been already checked.
     new = get >>= \already -> let
-      as = S.fromList . toListOf (folded . only g already)
-        . M.keys . nodes $ g in
+      as = S.fromList . toListOf
+        (ifolded . asIndex <. only g already) $ g in
           if S.null as then return () else
             put (as `S.union` already) >> tell [as] >> new
 
