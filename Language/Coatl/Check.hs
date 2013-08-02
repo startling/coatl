@@ -155,12 +155,11 @@ collect f = mapM (runEitherT . f) . toList
 checkNames ::
   ( MonadReader Environment m
   , MonadError [String] m )
-  => [Canonical] -> Expression a Canonical -> m ()
-checkNames cs e = (>> return ())
-  . collect id . (`map` toListOf references e)
-    $ \(a, v) -> ask >>= \m -> if M.member v m
-      || v `elem` cs then return ()
-        else throwError ["Unknown name: " ++ show v]
+  => [Declaration a Canonical] -> m ()
+checkNames ds = ask >>= \env ->
+  forM_ ds $ mapMOf_ (rhs . traverse)
+    $ \r -> unless (r `M.member` env || any ((r ==) . view lhs) ds)
+      $ throwError ["Unknown name: " ++ show r]
 
 -- | Create a graph from a list of declarations, with the provision
 --   that each value declaration depends on the corresponding type
