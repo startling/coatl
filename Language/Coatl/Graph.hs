@@ -100,7 +100,7 @@ cycles g  = snd $ execRWS
 
 -- | Topologically sort a 'Graph k'. This may fail with a list of
 --   cycles if the graph is cyclic.
-sort :: (Ord k, Ord a) => Graph k a -> Either [[k]] [[a]]
+sort :: Ord k => Graph k a -> Either [[k]] [[a]]
 sort g = let cs = cycles g in
   if not $ null cs then Left cs
     else Right . snd $ execRWS new g S.empty
