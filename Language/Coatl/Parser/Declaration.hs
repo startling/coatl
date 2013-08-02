@@ -35,13 +35,15 @@ instance MonadTrans Continued where
   lift = Continued
 
 instance (Monad m, TokenParsing m) => TokenParsing (Continued m) where
-  someSpace = skipSome $ space >>=
-    \c -> if c /= '\n' then return () else
-      () <$ string " " <?> "indentation"
+  someSpace = optional space >>= \s -> case s of
+    Nothing -> return ()
+    Just '\n' -> optional (string "  " <?> "identation")
+      >>= maybe (return ()) (const someSpace)
+    Just _ -> someSpace
   nesting = lift . nesting . runContinued
   semi = lift semi
   highlight h = lift . highlight h . runContinued
-  token a = a <* optional someSpace
+  token a = a <* someSpace
 
 -- | Annotate some parser with a 'Span' and apply the 'Span' and
 --   the results to some unary function.
@@ -77,13 +79,15 @@ signature = annotated2 Signature
   (name <|> parens operator)
   (reserve operatorStyle ":" *> expression)
 
--- | Parse a top-level value declaration.
-value :: DeltaParsing m => m (Declaration Span Identifier)
-value = annotated2 Value
+-- | Parse a top-level definition declaration.
+definition :: DeltaParsing m => m (Declaration Span Identifier)
+definition = annotated2 Value
   (name <|> parens operator)
   (function $ reserve operatorStyle "=")
 
 -- | Parse any top-level declaration.
 declaration :: DeltaParsing f => f (Declaration Span Identifier)
-declaration = runContinued $ try signature <|> value
+declaration =
+      (try (runContinued signature <* spaces) <?> "type signature")
+  <|> (try (runContinued definition <* spaces) <?> "definition")
 
