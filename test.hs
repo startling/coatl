@@ -16,6 +16,7 @@ import Control.Lens
 -- coatl
 import Language.Coatl.Abstract
 import Language.Coatl.Parser.Expression (expression)
+import Language.Coatl.Parser.Declaration (declaration)
 import Language.Coatl.Graph
 import Language.Coatl.Check
 
@@ -25,8 +26,8 @@ shouldParse p s = parseString p mempty s `shouldSatisfy`
     Success _ -> True
     Failure _ -> False )
 
-expressions :: Spec
-expressions =
+parsing :: Spec
+parsing= do
   describe "Language.Coatl.Parser.Expression" $ do
     describe "expression" $ do
       it "parses names" $ do
@@ -42,6 +43,18 @@ expressions =
         expression `shouldParse` "Type ~ {a => a -> a}"
       it "parses ordinary application" $ do
         expression `shouldParse` "traverse pure"
+  describe "Language.Coatl.Parser.Declaration" $ do
+    describe "declaration" $ do
+      it "parses simple redefinitions" $ do
+        declaration `shouldParse` "a = b"
+      it "parses definitions to calls" $ do
+        declaration `shouldParse` "a = f (g a b) c"
+      it "parses function definitions" $ do
+        declaration `shouldParse` "const a b = a"
+      it "parses simple type signatures" $ do
+        declaration `shouldParse` "Type : Type"
+      it "parses calls in type signatures" $ do
+        declaration `shouldParse` "the : Type ~ { a => a -> a}"
 
 graphs =
   describe "Language.Coatl.Graph" $ do
@@ -190,7 +203,7 @@ checks =
 
 main :: IO ()
 main = hspec . sequence_ $
-  [ expressions
+  [ parsing
   , graphs
   , checks
   ]
