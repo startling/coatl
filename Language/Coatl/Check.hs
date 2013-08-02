@@ -181,6 +181,30 @@ asGraph = connections (has _Signature &&& view lhs) deps where
         if has _Value d then f (True, view lhs d) *> direct
           else direct
 
+-- | Check a list of declarations and read them into the environment.
+declarations ::
+  ( MonadState Environment m
+  , MonadError [String] m )
+  => [Declaration Span Canonical] -> m ()
+declarations = mapM_ (collect check) <=<
+  either (throwError . (: []) . show) return . sort . asGraph where
+    check a = if has _Signature a
+      then view rhs a `checkAs` Reference Nothing Type
+      else use (at (view lhs a))
+        >>= maybe (throwError ["INTERNAL ERROR"])
+          (view rhs a `checkAs`)
+
+-- | Check whether some expression makes sense as a given type.
+-- 
+--   TODO
+checkAs ::
+  ( MonadState Environment m
+  , MonadError [String] m )
+  => Expression Span Canonical
+  -> Expression (Maybe Span) Canonical
+  -> m (Expression (Maybe Span) Canonical)
+checkAs expr ty = undefined
+
 -- | Conservatively check for partiality: if a declaration references
 --   anything that references itself, throw an error.
 --
