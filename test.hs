@@ -51,10 +51,14 @@ parsing= do
         declaration `shouldParse` "a = f (g a b) c"
       it "parses function definitions" $ do
         declaration `shouldParse` "const a b = a"
+      it "parses multiline definitions" $ do
+        declaration `shouldParse` "const a b = const\n  a b"
       it "parses simple type signatures" $ do
         declaration `shouldParse` "Type : Type"
       it "parses calls in type signatures" $ do
         declaration `shouldParse` "the : Type ~ { a => a -> a}"
+      it "parses multiline type signatures" $ do
+        declaration `shouldParse` "the : Type ~\n  { a => a -> a }"
 
 graphs =
   describe "Language.Coatl.Graph" $ do
