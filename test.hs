@@ -6,10 +6,13 @@ import Control.Monad
 -- containers
 import Data.Set (Set)
 import qualified Data.Set as S
+import qualified Data.Map as M
 -- trifecta
 import Text.Trifecta
 -- hspec
 import Test.Hspec
+-- lens
+import Control.Lens
 -- coatl
 import Language.Coatl.Abstract
 import Language.Coatl.Parser.Expression (expression)
@@ -42,7 +45,7 @@ expressions =
 
 graphs =
   describe "Language.Coatl.Graph" $ do
-    let graph = connections
+    let graph = associations
           [ (1, [1, 2])
           , (2, [3])
           , (3, [4])
@@ -90,7 +93,8 @@ graphs =
         cs `shouldSatisfy` all (`notElem` rotations [2, 3, 4])
     describe "sort" $ do
       let
-        directed = connections
+        directed :: Graph Int (Int, [Int])
+        directed = associations
           [ (1, [2, 3])
           , (2, [4])
           , (3, [])
@@ -115,10 +119,9 @@ graphs =
       rotations' _ [] = []
       rotations' n (a : as) = let new = as ++ [a]
         in new : rotations' (n - 1) new
-      before :: Ord a => a -> a -> [Set a] -> Bool
       before a b [] = False
-      before a b (s : ss) = if S.member b s then False
-        else if S.member a s then True else before a b ss
+      before a b (s : ss) = if any ((== b) . fst) s then False
+        else if any ((== a) . fst) s then True else before a b ss
 
 checks =
   describe "Language.Coatl.Check" $ do
@@ -189,5 +192,4 @@ main :: IO ()
 main = hspec . sequence_ $
   [ expressions
   , graphs
-  , checks
   ]
