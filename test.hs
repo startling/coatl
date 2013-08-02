@@ -166,7 +166,7 @@ checks =
       it "errors for `example` without assumptions" $ do
         shouldError . checkNames $ example
       it "errors for `example` even with standard assumptions" $ do
-        shouldn'tError . assuming standard . checkNames $ example
+        shouldError . assuming standard . checkNames $ example
     describe "declarations" $ do
       it "errors for trivially unproductively-recursive functions" $ do
         let
