@@ -7,6 +7,7 @@ module Language.Coatl.Graph where
 import Data.Maybe
 import Data.Foldable
 import Control.Applicative
+import Control.Arrow
 -- containers
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -35,10 +36,16 @@ instance (Show k, Show n) => Show (Graph k n) where
     ++ iconcatMap (\k v -> show (k, v)) g
     ++ "]"
 
--- | Create a 'Graph' from some association list of identifiers to
---   lists of other identifiers.
-connections :: Ord k => [(k, [k])] -> Graph k [k]
-connections = Graph folded . M.fromList
+-- | Create a 'Graph' from some list of nodes along with a
+--   function getting an identifier from a node and a fold over
+--   the identifiers of other nodes pointing from a node.
+connections :: Ord k => (n -> k) -> Fold n k -> [n] -> Graph k n
+connections c f = Graph f . M.fromList . map (c &&& id)
+
+-- | Create a graph from an association list of identifiers to
+--   some 'Foldable' of connected identifiers.
+associations :: (Ord k, Foldable f) => [(k, f k)] -> Graph k (k, f k)
+associations = connections fst (_2 . folded)
 
 -- | Fold over the IDs of the nodes pointed to by the node at some ID.
 next :: Ord k => Graph k n -> Fold k k
