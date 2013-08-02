@@ -174,14 +174,13 @@ checkNames cs e = (>> return ())
 --   of declaration eixsts.
 asGraph :: Ord v => [Declaration a v]
   -> Graph (Bool, v) (Declaration a v)
-asGraph = Graph deps . M.fromList .
-  map ((has _Signature &&& view lhs) &&& id) where
-    deps :: Fold (Declaration v a) (Bool, a)
-    deps f d = let
-      direct = (rhs . traverse)
-        (\x -> (x <$) . f . (,) False $ x) d in
-          if has _Value d then f (True, view lhs d) *> direct
-            else direct
+asGraph = connections (has _Signature &&& view lhs) deps where
+  deps :: Fold (Declaration v a) (Bool, a)
+  deps f d = let
+    direct = (rhs . traverse)
+      (\x -> (x <$) . f . (,) False $ x) d in
+        if has _Value d then f (True, view lhs d) *> direct
+          else direct
 
 -- | Conservatively check for partiality: if a declaration references
 --   anything that references itself, throw an error.
@@ -191,7 +190,7 @@ checkTotality :: (MonadReader Checked m, MonadError [String] m)
   => [(Canonical, Expression a Canonical)] -> Canonical -> m ()
 checkTotality cs c = let
   graph = map (fmap $ map snd . toListOf references) cs
-  in if path (connections graph) c c
+  in if path (associations graph) c c
     then throwError [show c ++ " references itself."]
     else return ()
 
