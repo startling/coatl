@@ -84,7 +84,7 @@ data Declaration a v
   | Signature
   { _label :: a
   , _lhs   :: v
-  , _type_ :: Expression a v
+  , _rhs   :: Expression a v
   } deriving
   ( Eq
   , Show
