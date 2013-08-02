@@ -192,4 +192,5 @@ main :: IO ()
 main = hspec . sequence_ $
   [ expressions
   , graphs
+  , checks
   ]
