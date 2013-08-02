@@ -43,11 +43,6 @@ parsing= do
         expression `shouldParse` "Type ~ {a => a -> a}"
       it "parses ordinary application" $ do
         expression `shouldParse` "traverse pure"
-      it "parses many declarations" $ do
-        (some expression `shouldParse`) $ unlines
-          [ "the : Type ~ { a => a -> a }"
-          , "the _ a = a"
-          ]
   describe "Language.Coatl.Parser.Declaration" $ do
     describe "declaration" $ do
       it "parses simple redefinitions" $ do
@@ -66,6 +61,11 @@ parsing= do
         declaration `shouldParse` "the : Type ~ { a => a -> a}"
       it "parses multiline type signatures" $ do
         declaration `shouldParse` "the : Type ~\n  { a => a -> a }"
+      it "parses many declarations" $ do
+        (some declaration `shouldParse`) $ unlines
+          [ "the : Type ~ { a => a -> a }"
+          , "the _ a = a"
+          ]
 
 graphs =
   describe "Language.Coatl.Graph" $ do
