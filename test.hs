@@ -43,10 +43,17 @@ parsing= do
         expression `shouldParse` "Type ~ {a => a -> a}"
       it "parses ordinary application" $ do
         expression `shouldParse` "traverse pure"
+      it "parses many declarations" $ do
+        (some expression `shouldParse`) $ unlines
+          [ "the : Type ~ { a => a -> a }"
+          , "the _ a = a"
+          ]
   describe "Language.Coatl.Parser.Declaration" $ do
     describe "declaration" $ do
       it "parses simple redefinitions" $ do
         declaration `shouldParse` "a = b"
+      it "parses definitions with newlines" $ do
+        declaration `shouldParse` "a = b\n"
       it "parses definitions to calls" $ do
         declaration `shouldParse` "a = f (g a b) c"
       it "parses function definitions" $ do
