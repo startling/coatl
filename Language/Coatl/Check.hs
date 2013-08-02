@@ -156,7 +156,7 @@ collect f = mapM (runEitherT . f) . toList
 -- | Check that all the references in an expression exist either
 --   in the environment or in a given list.
 checkNames :: (MonadReader Checked m, MonadError [String] m)
-  => [Canonical] -> Expression (Maybe Span) Canonical -> m ()
+  => [Canonical] -> Expression a Canonical -> m ()
 checkNames cs e = (>> return ())
   . collect id . (`map` toListOf references e)
     $ \(a, v) -> ask >>= \m -> if M.member v m
