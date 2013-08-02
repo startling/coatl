@@ -143,53 +143,41 @@ graphs =
 checks =
   describe "Language.Coatl.Check" $ do
     let
-      the = declaration "Type ~ { a => a -> a}" "{ _ => { a => a }}"
-      example = declaration "the Type Nat" "the Nat O"
+      the = declare
+        [ "the : Type ~ { a => a -> a}"
+        , "the _ a = a"
+        ]
+      example = declare
+        [ "example : the Type Nat"
+        , "example = the Nat O"
+        ]
     describe "checkNames" $ do
-      it "errors for `the`'s type without the standard assumptions" $ do
-        shouldError . checkNames [] . fst $ the
-      it "does not error for `the`'s type with standard assumptions" $ do
-        shouldn'tError . assuming standard . checkNames [] . fst $ the
-      it "does not error for `the`'s RHS" $ do
-        shouldn'tError . checkNames [] . snd $ the
-      it "errors for `example`'s type" $ do
-        shouldError . checkNames [] . fst $ example
-      it "errors for `example`'s RHS" $ do
-        shouldError . checkNames [] . snd $ example
-      it "does not error for `example`'s RHS given appropriate arguments" $ do
-        shouldn'tError . assuming standard
-          . checkNames
-            [ Simple $ Name "O"
-            , Simple $ Name "Nat"
-            , Simple $ Name "the"
-            ] . snd $ example
-    describe "checkTotality" $ do
+      it "errors for `the` without standard assumptions" $ do
+        shouldError . checkNames $ the
+      it "does not error for `the` with standard assumptions" $ do
+        shouldn'tError . assuming standard . checkNames $ the
+      it "errors for `example` without assumptions" $ do
+        shouldError . checkNames $ example
+      it "errors for `example` even with standard assumptions" $ do
+        shouldn'tError . assuming standard . checkNames $ example
+    describe "declarations" $ do
       it "errors for trivially unproductively-recursive functions" $ do
-        let bottom = declaration "Type ~ {a => a}" "bottom"
-        shouldError . checkTotality [(Simple $ Name "bottom", snd bottom)]
-          $ Simple $ Name "bottom"
-      it "should not error for `the`'s or `example`'s types" $ do
-        shouldn'tError . forM
-          [ Simple $ Name "the"
-          , Simple $ Name "example"
-          ] $ checkTotality
-          [ (Simple $ Name "the", fst the)
-          , (Simple $ Name "example", fst example)
-          ]
-      it "should not error for `the`'s or `example`'s RHS" $ do
-        shouldn'tError . forM
-          [ Simple $ Name "the"
-          , Simple $ Name "example"
-          ] $ checkTotality
-          [ (Simple $ Name "the", snd the)
-          , (Simple $ Name "example", snd example)
-          ]
+        let
+          bottom = declare
+            [ "bottom : Type ~ {a => a}"
+            , "bottom = bottom"
+            ]
+        shouldError $ declarations bottom
+      it "should not error for `the`'s or `example`'s types or definitions" $ do
+        shouldn'tError . declarations $ the ++ example
       it "doesn't error for 'x = const O x'" $ do
         pendingWith "is this kind of thing worth the effort?"
-        let x = declaration "Nat" "const O x"
-        shouldn'tError . checkTotality 
-          [ ( Simple $ Name "x", snd x)
-          ] $ Simple $ Name "x"
+        let
+          x = declare
+            [ "x : Nat"
+            , "x = const O x"
+            ]
+        shouldn'tError . declarations $ x
   where
     shouldError :: Show a => WithEnvironment a -> Expectation
     shouldError m = shouldSatisfy (withEnvironment m)
@@ -197,11 +185,10 @@ checks =
     shouldn'tError :: Show a => WithEnvironment a -> Expectation
     shouldn'tError m = shouldSatisfy (withEnvironment m)
       $ \e -> case e of Left _ -> False; Right _ -> True;
-    parse :: String -> Result (Expression Span Canonical)
-    parse = fmap (fmap canonicalize) . parseString expression mempty
-    declaration :: String -> String
-      -> (Expression Span Canonical, Expression Span Canonical)
-    declaration a b = case (,) <$> parse a <*> parse b of
+    parse :: String -> Result [Declaration Span Canonical]
+    parse = fmap (map $ fmap canonicalize) . parseString (some declaration) mempty
+    declare :: [String] -> [Declaration Span Canonical]
+    declare as = case parse $ unlines as of
       Success a -> a
       Failure f -> error $ show f
 
