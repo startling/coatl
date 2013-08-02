@@ -25,20 +25,23 @@ annotated2 :: DeltaParsing f
 annotated2 f a b = (\((t, u) :~ s) -> f s t u) <$> spanned
   ((,) <$> a <*> b)
 
+-- | Parse with a top-level parametric parser.
+topLevel :: (Monad f, TokenParsing f)
+  => ((a -> a) -> f Identifier -> f a) -> f a
+topLevel f = f id (name <|> parens operator)
+
 -- | Given some parser matching a delimiter between arguments and
 --   function bodies, parse a function.
-function :: DeltaParsing f => f n -> f (Expression Span Identifier)
-function del = function' del id (name <|> parens operator) where
-  function' :: DeltaParsing f
-    => f n
-    => (Expression Span Identifier -> Expression Span v)
-    -> f v
-    -> f (Expression Span v)
-  function' d l f =
-        try (d *> inner l f)
-     <|> annotated1 Lambda
-       ( ident nameStyle >>= \arg ->
-         function' d (fmap Just . l)
+function :: DeltaParsing f
+  => f n
+  => (Expression Span Identifier -> Expression Span v)
+  -> f v
+  -> f (Expression Span v)
+function d l f =
+      try (d *> inner l f)
+   <|> annotated1 Lambda
+     ( ident nameStyle >>= \arg ->
+       function d (fmap Just . l)
            $ (Nothing <$ symbol arg) <|> (Just <$> f))
 
 -- | Parse a top-level type signature.
@@ -51,11 +54,11 @@ signature = annotated2 Signature
 definition :: DeltaParsing m => m (Declaration Span Identifier)
 definition = annotated2 Value
   (name <|> parens operator)
-  (function $ reserve operatorStyle "=")
+  (topLevel . function $ reserve operatorStyle "=")
 
 -- | Parse any top-level declaration.
 declaration :: DeltaParsing f => f (Declaration Span Identifier)
 declaration =
-  (     (try signature <?> "type signature")
+       ((try signature <?> "type signature")
     <|> (try definition <?> "definition")) <* semi
 
