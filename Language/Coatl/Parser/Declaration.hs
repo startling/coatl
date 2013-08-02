@@ -13,38 +13,6 @@ import Text.Trifecta
 import Language.Coatl.Abstract
 import Language.Coatl.Parser.Expression
 
--- | A parser transformer that requires some indentation after every
---   newline.
---
---   Note that this won't require multiple indentation levels when
---   nested -- I'm not sure it's possible in general with 'TokenParsing'.
-newtype Continued m a = Continued
-  { runContinued :: m a
-  } deriving
-  ( Functor
-  , Applicative
-  , Alternative
-  , Monad
-  , MonadPlus
-  , Parsing
-  , CharParsing
-  , DeltaParsing
-  )
-
-instance MonadTrans Continued where
-  lift = Continued
-
-instance (Monad m, TokenParsing m) => TokenParsing (Continued m) where
-  someSpace = optional space >>= \s -> case s of
-    Nothing -> return ()
-    Just '\n' -> optional (string "  " <?> "identation")
-      >>= maybe (return ()) (const someSpace)
-    Just _ -> someSpace
-  nesting = lift . nesting . runContinued
-  semi = lift semi
-  highlight h = lift . highlight h . runContinued
-  token a = a <* someSpace
-
 -- | Annotate some parser with a 'Span' and apply the 'Span' and
 --   the results to some unary function.
 annotated1 :: DeltaParsing f => (Span -> a -> r) -> f a -> f r
@@ -88,6 +56,6 @@ definition = annotated2 Value
 -- | Parse any top-level declaration.
 declaration :: DeltaParsing f => f (Declaration Span Identifier)
 declaration =
-      (try (runContinued signature <* spaces) <?> "type signature")
-  <|> (try (runContinued definition <* spaces) <?> "definition")
+  (     (try signature <?> "type signature")
+    <|> (try definition <?> "definition")) <* semi
 

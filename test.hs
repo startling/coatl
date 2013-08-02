@@ -46,25 +46,25 @@ parsing= do
   describe "Language.Coatl.Parser.Declaration" $ do
     describe "declaration" $ do
       it "parses simple redefinitions" $ do
-        declaration `shouldParse` "a = b"
+        declaration `shouldParse` "a = b;"
       it "parses definitions with newlines" $ do
-        declaration `shouldParse` "a = b\n"
+        declaration `shouldParse` "a = b;\n"
       it "parses definitions to calls" $ do
-        declaration `shouldParse` "a = f (g a b) c"
+        declaration `shouldParse` "a = f (g a b) c;"
       it "parses function definitions" $ do
-        declaration `shouldParse` "const a b = a"
+        declaration `shouldParse` "const a b = a;"
       it "parses multiline definitions" $ do
-        declaration `shouldParse` "const a b = const\n  a b"
+        declaration `shouldParse` "const a b = const\n  a b;"
       it "parses simple type signatures" $ do
-        declaration `shouldParse` "Type : Type"
+        declaration `shouldParse` "Type : Type;"
       it "parses calls in type signatures" $ do
-        declaration `shouldParse` "the : Type ~ { a => a -> a}"
+        declaration `shouldParse` "the : Type ~ { a => a -> a};"
       it "parses multiline type signatures" $ do
-        declaration `shouldParse` "the : Type ~\n  { a => a -> a }"
+        declaration `shouldParse` "the : Type ~\n  { a => a -> a };"
       it "parses many declarations" $ do
         (some declaration `shouldParse`) $ unlines
-          [ "the : Type ~ { a => a -> a }"
-          , "the _ a = a"
+          [ "the : Type ~ { a => a -> a };"
+          , "the _ a = a;"
           ]
 
 graphs =
@@ -151,12 +151,12 @@ checks =
   describe "Language.Coatl.Check" $ do
     let
       the = declare
-        [ "the : Type ~ { a => a -> a}"
-        , "the _ a = a"
+        [ "the : Type ~ { a => a -> a};"
+        , "the _ a = a;"
         ]
       example = declare
-        [ "example : the Type Nat"
-        , "example = the Nat O"
+        [ "example : the Type Nat;"
+        , "example = the Nat O;"
         ]
     describe "checkNames" $ do
       it "errors for `the` without standard assumptions" $ do
@@ -171,8 +171,8 @@ checks =
       it "errors for trivially unproductively-recursive functions" $ do
         let
           bottom = declare
-            [ "bottom : Type ~ {a => a}"
-            , "bottom = bottom"
+            [ "bottom : Type ~ {a => a};"
+            , "bottom = bottom;"
             ]
         shouldError $ declarations bottom
       it "should not error for `the`'s or `example`'s types or definitions" $ do
@@ -181,8 +181,8 @@ checks =
         pendingWith "is this kind of thing worth the effort?"
         let
           x = declare
-            [ "x : Nat"
-            , "x = const O x"
+            [ "x : Nat;"
+            , "x = const O x;"
             ]
         shouldn'tError . declarations $ x
   where
