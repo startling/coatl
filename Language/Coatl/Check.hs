@@ -66,28 +66,7 @@ import Text.Trifecta
 -- coatl
 import Language.Coatl.Abstract
 import Language.Coatl.Graph
-
--- | A canonical identifier is either a reference to another part of the
---   program or one of the internal values: (~), (->), or Type. 
--- 
---  In the future I will probably extend this to take module names into
---  account.
-data Canonical
-  = Simple Identifier
-  | Dependent
-  | Function
-  | Type
-  deriving
-  ( Eq
-  , Ord
-  , Show
-  )
-
-canonicalize :: Identifier -> Canonical
-canonicalize (Operator "->") = Function
-canonicalize (Operator "~") = Dependent
-canonicalize (Name "Type") = Type
-canonicalize o = Simple o
+import Language.Coatl.Check.Environment hiding (Environment)
 
 -- | A type representing the things in our checking environment.
 type Environment = Map Canonical (Expression (Maybe Span) Canonical)
@@ -193,7 +172,8 @@ declarations = mapM_ (collect check) <=<
         >>= maybe (throwError ["INTERNAL ERROR"])
           (view rhs a `checkAs`)
 
--- | Check whether some expression makes sense as a given type.
+-- | Check whether some expression makes sense as a given type;
+--   this assumes the type is in normal form.
 -- 
 --   TODO
 checkAs ::

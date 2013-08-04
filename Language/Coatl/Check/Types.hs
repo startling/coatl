@@ -14,7 +14,6 @@ import Control.Lens
 -- coatl
 import Language.Coatl.Abstract
 import Language.Coatl.Check.Environment
-import Language.Coatl.Check (Canonical(..))
 
 -- | Infer the type of an 'Inferrable' term.
 infer ::

@@ -17,7 +17,29 @@ import qualified Data.Map as M
 import Control.Lens
 -- coatl
 import Language.Coatl.Abstract
-import Language.Coatl.Check (Canonical(..))
+
+-- | A canonical identifier is either a reference to another part of the
+--   program or one of the internal values: (~), (->), or Type. 
+-- 
+--  In the future I will probably extend this to take module names into
+--  account.
+data Canonical
+  = Simple Identifier
+  | Dependent
+  | Function
+  | Type
+  deriving
+  ( Eq
+  , Ord
+  , Show
+  )
+
+-- | Change an identifier into its canonical representation.
+canonicalize :: Identifier -> Canonical
+canonicalize (Operator "->") = Function
+canonicalize (Operator "~") = Dependent
+canonicalize (Name "Type") = Type
+canonicalize o = Simple o
 
 data Inferrable a v
   = IReference a v
