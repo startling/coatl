@@ -26,6 +26,7 @@ import Language.Coatl.Parser.Declaration (declaration)
 import Language.Coatl.Graph
 import Language.Coatl.Check
 import Language.Coatl.Check.Types
+import Language.Coatl.Check.Environment
 
 shouldParse :: Show a => Parser a -> String -> Expectation
 shouldParse p s = parseString p mempty s `shouldSatisfy`
