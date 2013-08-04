@@ -76,7 +76,7 @@ inner l f = buildExpressionParser table (applied l f) where
     (Application (l $ Reference sp (Operator s)) a) b
   binary s a = Infix (application l s <$> spanning (symbol s)) a
   table =
-    [ [ binary "->" AssocLeft ]
+    [ [ binary "->" AssocRight ]
     , [ binary "~" AssocLeft ]
     ]
 

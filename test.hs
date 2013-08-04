@@ -50,6 +50,7 @@ parsing= do
         expression `shouldParse` "Type ~ {a => a -> a}"
       it "parses ordinary application" $ do
         expression `shouldParse` "traverse pure"
+      -- TODO: tests for fixity
   describe "Language.Coatl.Parser.Declaration" $ do
     describe "declaration" $ do
       it "parses simple redefinitions" $ do
