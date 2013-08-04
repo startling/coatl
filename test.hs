@@ -7,6 +7,12 @@ import Control.Monad
 import Data.Set (Set)
 import qualified Data.Set as S
 import qualified Data.Map as M
+-- transformers
+import Control.Monad.Identity
+-- mtl
+import Control.Monad.Reader
+-- either
+import Control.Monad.Trans.Either
 -- trifecta
 import Text.Trifecta
 -- hspec
@@ -19,6 +25,7 @@ import Language.Coatl.Parser.Expression (expression)
 import Language.Coatl.Parser.Declaration (declaration)
 import Language.Coatl.Graph
 import Language.Coatl.Check
+import Language.Coatl.Check.Types
 
 shouldParse :: Show a => Parser a -> String -> Expectation
 shouldParse p s = parseString p mempty s `shouldSatisfy`
@@ -147,7 +154,7 @@ graphs =
       before a b (s : ss) = if any ((== b) . fst) s then False
         else if any ((== a) . fst) s then True else before a b ss
 
-checks =
+checks = do
   describe "Language.Coatl.Check" $ do
     let
       the = declare
@@ -185,7 +192,28 @@ checks =
             , "x = const O x;"
             ]
         shouldn'tError . declarations $ x
+  describe "Language.Coatl.Check.Types" $ do
+    describe "check" $ do
+      it "allows monomorphic 'id'" $ do
+        "{ x => x }" `checksAs` "a -> a"
+      it "allows monomorphic 'const'" $ do
+        "{ x => { _ => x } }" `checksAs` "a -> a -> a"
+      it "allows polymorphic 'the'/'id'" $
+        "{ _ => { x => x } }" `checksAs` "Type ~ { a => a -> a }"
   where
+    uniform = over annotations (const ()) . fmap canonicalize
+    checksAs :: String -> String -> Expectation
+    checksAs v s = case (,) <$> parseString expression mempty v
+      <*> parseString expression mempty s of
+        Failure _ -> error ":("
+        Success (v', s') -> (`shouldSatisfy` has _Right)
+          . runIdentity
+          . runEitherT
+          . flip runReaderT (Environment id
+            (M.singleton (Simple $ Name "a")
+            (CInferrable $ IReference () Type)))
+          $ (,) <$> represent (uniform v')
+                <*> represent (uniform s') >>= uncurry check
     shouldError :: Show a => WithEnvironment a -> Expectation
     shouldError m = shouldSatisfy (withEnvironment m)
       $ \e -> case e of Left _ -> True; Right _ -> False;
@@ -205,3 +233,4 @@ main = hspec . sequence_ $
   , graphs
   , checks
   ]
+
