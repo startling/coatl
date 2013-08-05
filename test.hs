@@ -45,8 +45,12 @@ parsing= do
       it "parses infix operators" $ do
         expression `shouldParse` "a -> b"
         expression `shouldParse` "a ~ b"
-      it "parses lambdas" $ do
+      it "parses unary lambdas" $ do
         expression `shouldParse` "{a => a}"
+      it "parses n-ary lambdas where n > 1" $ do
+        expression `shouldParse` "{a b => a}"
+        expression `shouldParse` "{a b c => a}"
+        expression `shouldParse` "{a b c d => a}"
       it "parses the type of the identity function" $ do
         expression `shouldParse` "Type ~ {a => a -> a}"
       it "parses ordinary application" $ do
