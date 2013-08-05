@@ -35,37 +35,7 @@ import qualified Text.Parser.Token.Highlight as Highlight
 import Text.Trifecta
 -- coatl
 import Language.Coatl.Abstract
-
--- | The identifier style defining ordinary names.
-nameStyle :: CharParsing m => IdentifierStyle m
-nameStyle = IdentifierStyle
-  { _styleName = "name"
-  , _styleStart = letter <|> oneOf "_"
-  , _styleLetter = alphaNum <|> oneOf "-'"
-  , _styleReserved = H.empty
-  , _styleHighlight = Highlight.Identifier
-  , _styleReservedHighlight = Highlight.ReservedIdentifier
-  }
-
-name :: (Monad m, TokenParsing m) => m Identifier
-name = Name <$> ident nameStyle
-
--- | The identifier style defining operators.
-operatorStyle :: (Monad m, CharParsing m) => IdentifierStyle m
-operatorStyle = IdentifierStyle
-  { _styleName = "operator"
-  , _styleStart = part
-  , _styleLetter = part <|> alphaNum
-  , _styleReserved = H.fromList ["=>", "="]
-  , _styleHighlight = Highlight.Operator
-  , _styleReservedHighlight = Highlight.ReservedOperator
-  } where
-    part :: (Monad m, CharParsing m) => m Char
-    part = satisfy $ \x -> (isSymbol x || isPunctuation x)
-      && x `notElem` "\"_{}()"
-
-operator :: (Monad m, TokenParsing m) => m Identifier
-operator = Operator <$> ident operatorStyle
+import Language.Coatl.Parser.Common
 
 -- | Parse any expression with a given `l` and `f`.
 inner :: DeltaParsing f
@@ -93,21 +63,33 @@ single :: DeltaParsing f
   => (Expression Span Identifier -> Expression Span v)
   -> f v -> f (Expression Span v)
 single l f =
-      try ((\(r :~ s) -> Reference s r) <$> spanned f)
+      try (annotated1 Reference f)
   <|> lambda l f
   <|> parens (inner l f)
+
+-- | Given some parser matching a delimiter between arguments and
+--   function bodies, parse a function.
+function :: DeltaParsing f
+  => f n
+  => (Expression Span Identifier -> Expression Span v)
+  -> f v
+  -> f (Expression Span v)
+function d l f =
+      try (d *> inner l f)
+   <|> annotated1 Lambda
+     ( ident nameStyle >>= \arg ->
+       function d (fmap Just . l)
+           $ (Nothing <$ symbol arg) <|> (Just <$> f))
 
 -- | Parse a lambda, with the syntax `{a => a}`. This recurs
 --   on `l` and `f` as described above.
 lambda :: DeltaParsing f
   => (Expression Span Identifier -> Expression Span v)
   -> f v -> f (Expression Span v)
-lambda l f = (\(r :~ s) -> Lambda s r) <$> spanned (body l f) where
-  body l f = braces $ ident nameStyle <* arrow >>= \arg ->
-    inner (fmap Just . l) $ (Nothing <$ symbol arg) <|> (Just <$> f)
+lambda l f = braces $ function arrow l f where
   arrow :: (Monad m, TokenParsing m) => m ()
   arrow = reserve operatorStyle "=>"
 
 -- | Parse any top-level expression.
 expression :: DeltaParsing f => f (Expression Span Identifier)
-expression = inner id (name <|> parens operator)
+expression = topLevel inner
