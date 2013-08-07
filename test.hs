@@ -21,8 +21,8 @@ import Test.Hspec
 import Control.Lens
 -- coatl
 import Language.Coatl.Abstract
-import Language.Coatl.Parser.Expression (expression)
-import Language.Coatl.Parser.Declaration (declaration)
+import Language.Coatl.Parse.Expression (expression)
+import Language.Coatl.Parse.Declaration (declaration)
 import Language.Coatl.Graph
 import Language.Coatl.Check
 import Language.Coatl.Check.Types
@@ -36,7 +36,7 @@ shouldParse p s = parseString p mempty s `shouldSatisfy`
 
 parsing :: Spec
 parsing= do
-  describe "Language.Coatl.Parser.Expression" $ do
+  describe "Language.Coatl.Parse.Expression" $ do
     describe "expression" $ do
       it "parses names" $ do
         expression `shouldParse` "function"
@@ -56,7 +56,7 @@ parsing= do
       it "parses ordinary application" $ do
         expression `shouldParse` "traverse pure"
       -- TODO: tests for fixity
-  describe "Language.Coatl.Parser.Declaration" $ do
+  describe "Language.Coatl.Parse.Declaration" $ do
     describe "declaration" $ do
       it "parses simple redefinitions" $ do
         declaration `shouldParse` "a = b;"

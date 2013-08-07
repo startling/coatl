@@ -1,5 +1,5 @@
 {-# Language GeneralizedNewtypeDeriving #-}
-module Language.Coatl.Parser.Declaration where
+module Language.Coatl.Parse.Declaration where
 -- base
 import Control.Applicative
 import Control.Monad
@@ -11,8 +11,8 @@ import Control.Monad.State
 import Text.Trifecta
 -- coatl
 import Language.Coatl.Abstract
-import Language.Coatl.Parser.Common
-import Language.Coatl.Parser.Expression
+import Language.Coatl.Parse.Common
+import Language.Coatl.Parse.Expression
 
 -- | Parse a top-level type signature.
 signature :: DeltaParsing m => m (Declaration Span Identifier)

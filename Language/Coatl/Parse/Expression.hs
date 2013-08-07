@@ -20,7 +20,7 @@
 --   (though there will be some complications with 'Parsing'
 --   instances), and we will probably want to expose a way to specify
 --   additions to the operator table.
-module Language.Coatl.Parser.Expression where
+module Language.Coatl.Parse.Expression where
 -- base
 import Control.Applicative
 import Data.Char
@@ -35,7 +35,7 @@ import qualified Text.Parser.Token.Highlight as Highlight
 import Text.Trifecta
 -- coatl
 import Language.Coatl.Abstract
-import Language.Coatl.Parser.Common
+import Language.Coatl.Parse.Common
 
 -- | Parse any expression with a given `l` and `f`.
 inner :: DeltaParsing f

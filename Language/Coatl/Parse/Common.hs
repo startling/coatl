@@ -1,4 +1,4 @@
-module Language.Coatl.Parser.Common where
+module Language.Coatl.Parse.Common where
 -- base
 import Control.Applicative
 import Data.Char
