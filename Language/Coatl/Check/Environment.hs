@@ -97,16 +97,16 @@ data Environment a v = Environment
 makeLenses ''Environment
 
 -- | A Prism on binary application.
-binary :: Canonical -> APrism' v Canonical
-  -> Simple Prism (Inferrable a v)
-     (a, Checkable a v, Checkable a v)
-binary c nd = prism create decompose where
-  create (s, a, b) = IApplication
+binary :: APrism' v Canonical -> Simple Prism (Inferrable a v)
+  (Canonical, a, Checkable a v, Checkable a v)
+binary nd = prism create decompose where
+  create (c, s, a, b) = IApplication
     (IApplication (IReference s
-      (view (re $ clonePrism nd) Function)) a) b
+      (view (re $ clonePrism nd) c)) a) b
   decompose ck = case ck of
     i@(IApplication (IApplication (IReference s n) a) b) ->
-      if preview (clonePrism nd) n == Just c
-        then Right (s, a, b) else Left i
+      case preview (clonePrism nd) n of
+        Nothing -> Left i
+        Just c -> Right (c, s, a, b)
     elsewise -> Left elsewise
 

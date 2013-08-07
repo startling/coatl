@@ -26,13 +26,11 @@ infer (IReference _ v) = view (types . at v)
     report = throwError
       [printf "Symbol not in scope: \"%s\"" (show v)]
 infer (IApplication f ar) = view named >>= \nd -> infer f >>= \ft ->
-    case preview (_CInferrable . binary Function nd) ft of
-      Just (_, a, b) -> check ar a >> return b
-      Nothing -> case preview
-        (_CInferrable . binary Dependent nd) ft of
-          Just (_, _, _) -> throwError
-            [printf "(~) unimplemented as of yet"]
-          Nothing -> report
+    case preview (_CInferrable . binary nd) ft of
+      Just (Function, _, a, b) -> check ar a >> return b
+      Just (Dependent, _, _, _) -> throwError
+        [printf "(~) unimplemented as of yet"]
+      _ -> report
   where
     report :: MonadError [String] m => m a
     report = throwError
@@ -44,12 +42,12 @@ check ::
   , MonadError [String] m )
   => Checkable a v -> Checkable b v -> ReaderT (Environment b v) m ()
 check (CLambda _ l) t = view named
-  >>= \nd -> case preview (_CInferrable . binary Function nd) t of
-    Just (_, a, b) -> withReaderT (add a . lower) $ check l (fmap Just b)
-    Nothing -> case preview (_CInferrable . binary Dependent nd) t of
-      Nothing -> throwError ["Expected a function type"]
-      Just (_, a, b) -> throwError
-        [printf "(~) unimplemented as of yet"]
+  >>= \nd -> case preview (_CInferrable . binary nd) t of
+    Just (Function, _, a, b) -> withReaderT (add a . lower)
+      $ check l (fmap Just b)
+    Just (Dependent, _, _, _) -> throwError
+      [printf "(~) unimplemented as of yet"]
+    _ -> throwError ["Expected a function type"]
   where
     lower :: Ord v => Environment a v -> Environment a (Maybe v)
     lower (Environment n ts) = Environment (_Just . n)
