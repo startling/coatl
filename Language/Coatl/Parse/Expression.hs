@@ -34,16 +34,16 @@ import qualified Text.Parser.Token.Highlight as Highlight
 -- trifecta
 import Text.Trifecta
 -- coatl
-import Language.Coatl.Abstract
+import Language.Coatl.Parse.Syntax
 import Language.Coatl.Parse.Common
 
 -- | Parse any expression with a given `l` and `f`.
 inner :: DeltaParsing f
-  => (Expression Span Identifier -> Expression Span v)
-  -> f v -> f (Expression Span v)
+  => (Syntax Span Identifier -> Syntax Span v)
+  -> f v -> f (Syntax Span v)
 inner l f = buildExpressionParser table (applied l f) where
-  application l s sp a b = Application
-    (Application (l $ Reference sp (Operator s)) a) b
+  application l s sp a b = SApplication
+    (SApplication (l $ SReference sp (Operator s)) a) b
   binary s a = Infix (application l s <$> spanning (symbol s)) a
   table =
     [ [ binary "->" AssocRight ]
@@ -53,17 +53,17 @@ inner l f = buildExpressionParser table (applied l f) where
 -- | Parse any non-zero-length sequence of simple values,
 --   treating them as applications.
 applied :: DeltaParsing f
-  => (Expression Span Identifier -> Expression Span v)
-  -> f v -> f (Expression Span v)
-applied l f = foldl1 Application <$> some (single l f)
+  => (Syntax Span Identifier -> Syntax Span v)
+  -> f v -> f (Syntax Span v)
+applied l f = foldl1 SApplication <$> some (single l f)
 
 -- | Parse a simple value; that is, a reference, lambda,
 --   or any parenthesized expression.
 single :: DeltaParsing f
-  => (Expression Span Identifier -> Expression Span v)
-  -> f v -> f (Expression Span v)
+  => (Syntax Span Identifier -> Syntax Span v)
+  -> f v -> f (Syntax Span v)
 single l f =
-      try (annotated1 Reference f)
+      try (annotated1 SReference f)
   <|> lambda l f
   <|> parens (inner l f)
 
@@ -71,12 +71,12 @@ single l f =
 --   function bodies, parse a function.
 function :: DeltaParsing f
   => f n
-  => (Expression Span Identifier -> Expression Span v)
+  => (Syntax Span Identifier -> Syntax Span v)
   -> f v
-  -> f (Expression Span v)
+  -> f (Syntax Span v)
 function d l f =
       try (d *> inner l f)
-   <|> annotated1 Lambda
+   <|> annotated1 SLambda
      ( ident nameStyle >>= \arg ->
        function d (fmap Just . l)
            $ (Nothing <$ symbol arg) <|> (Just <$> f))
@@ -84,12 +84,12 @@ function d l f =
 -- | Parse a lambda, with the syntax `{a => a}`. This recurs
 --   on `l` and `f` as described above.
 lambda :: DeltaParsing f
-  => (Expression Span Identifier -> Expression Span v)
-  -> f v -> f (Expression Span v)
+  => (Syntax Span Identifier -> Syntax Span v)
+  -> f v -> f (Syntax Span v)
 lambda l f = braces $ function arrow l f where
   arrow :: (Monad m, TokenParsing m) => m ()
   arrow = reserve operatorStyle "=>"
 
 -- | Parse any top-level expression.
-expression :: DeltaParsing f => f (Expression Span Identifier)
+expression :: DeltaParsing f => f (Syntax Span Identifier)
 expression = topLevel inner

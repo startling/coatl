@@ -64,12 +64,13 @@ import Control.Lens
 -- trifecta
 import Text.Trifecta
 -- coatl
-import Language.Coatl.Abstract
 import Language.Coatl.Graph
+import Language.Coatl.Parse.Syntax
+import Language.Coatl.Check.Abstract
 import Language.Coatl.Check.Environment hiding (Environment)
 
 -- | A type representing the things in our checking environment.
-type Environment = Map Canonical (Expression (Maybe Span) Canonical)
+type Environment = Map Canonical (Syntax (Maybe Span) Canonical)
 
 type WithEnvironmentT m a = ReaderT Environment
   (StateT Environment (EitherT [String] m)) a
@@ -90,7 +91,7 @@ withEnvironment = runIdentity . withEnvironmentT
 assuming ::
   ( MonadReader Environment m
   , MonadError [String] m )
-  => [(Canonical, Expression (Maybe Span) Canonical)] -> m a -> m a
+  => [(Canonical, Syntax (Maybe Span) Canonical)] -> m a -> m a
 assuming as = local $ \e -> e <> M.fromList as
 
 -- | The standard environment. We have the following types:
@@ -100,25 +101,25 @@ assuming as = local $ \e -> e <> M.fromList as
 --    (->) : Type -> Type -> Type
 --    (~)  : Type ~ { a => (a -> Type) -> Type }
 --  @
-standard :: [(Canonical, Expression (Maybe a) Canonical)]
+standard :: [(Canonical, Syntax (Maybe a) Canonical)]
 standard =
   [ (Type, type_)
   , (Function, binary function type_ type_)
   , (Dependent, binary dependent type_
-      . Lambda Nothing
+      . SLambda Nothing
         . binary (Just <$> function)
           (binary (Just <$> function)
-            (Reference Nothing Nothing) (Just <$> type_))
+            (SReference Nothing Nothing) (Just <$> type_))
              $ Just <$> type_ )
   ]
   where
-    binary a b c = Application (Application a b) c
-    type_ :: Expression (Maybe a) Canonical
-    type_ = Reference Nothing Type
-    function :: Expression (Maybe a) Canonical
-    function = Reference Nothing Function
-    dependent :: Expression (Maybe a) Canonical
-    dependent = Reference (Nothing) Dependent
+    binary a b c = SApplication (SApplication a b) c
+    type_ :: Syntax (Maybe a) Canonical
+    type_ = SReference Nothing Type
+    function :: Syntax (Maybe a) Canonical
+    function = SReference Nothing Function
+    dependent :: Syntax (Maybe a) Canonical
+    dependent = SReference (Nothing) Dependent
 
 -- | Run a number of 'EitherT e m b' with the same error state,
 --   'mappend' the errors together, and throw the result.
@@ -156,7 +157,7 @@ asGraph = connections (has _Signature &&& view lhs) deps where
   deps f d = let
     direct = (rhs . traverse)
       (\x -> (x <$) . f . (,) False $ x) d in
-        if has _Value d then f (True, view lhs d) *> direct
+        if has _Definition d then f (True, view lhs d) *> direct
           else direct
 
 -- | Check a list of declarations and read them into the environment.
@@ -167,7 +168,7 @@ declarations ::
 declarations = mapM_ (collect check) <=<
   either (throwError . (: []) . show) return . sort . asGraph where
     check a = if has _Signature a
-      then view rhs a `checkAs` Reference Nothing Type
+      then view rhs a `checkAs` SReference Nothing Type
       else use (at (view lhs a))
         >>= maybe (throwError ["INTERNAL ERROR"])
           (view rhs a `checkAs`)
@@ -179,9 +180,9 @@ declarations = mapM_ (collect check) <=<
 checkAs ::
   ( MonadState Environment m
   , MonadError [String] m )
-  => Expression Span Canonical
-  -> Expression (Maybe Span) Canonical
-  -> m (Expression (Maybe Span) Canonical)
+  => Syntax Span Canonical
+  -> Syntax (Maybe Span) Canonical
+  -> m (Syntax (Maybe Span) Canonical)
 checkAs expr ty = undefined
 
 -- | Conservatively check for partiality: if a declaration references
@@ -189,9 +190,9 @@ checkAs expr ty = undefined
 --
 --   This should probably be improved eventually.
 checkTotality :: (MonadReader Environment m, MonadError [String] m)
-  => [(Canonical, Expression a Canonical)] -> Canonical -> m ()
+  => [(Canonical, Syntax a Canonical)] -> Canonical -> m ()
 checkTotality cs c = let
-  graph = map (fmap $ map snd . toListOf references) cs
+  graph = map (fmap toList) cs
   in if path (associations graph) c c
     then throwError [show c ++ " references itself."]
     else return ()

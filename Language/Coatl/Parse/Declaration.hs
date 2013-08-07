@@ -10,7 +10,7 @@ import Control.Monad.State
 -- trifecta
 import Text.Trifecta
 -- coatl
-import Language.Coatl.Abstract
+import Language.Coatl.Parse.Syntax
 import Language.Coatl.Parse.Common
 import Language.Coatl.Parse.Expression
 
@@ -22,7 +22,7 @@ signature = annotated2 Signature
 
 -- | Parse a top-level definition declaration.
 definition :: DeltaParsing m => m (Declaration Span Identifier)
-definition = annotated2 Value
+definition = annotated2 Definition
   (name <|> parens operator)
   (topLevel . function $ reserve operatorStyle "=")
 

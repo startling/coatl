@@ -13,6 +13,8 @@ import Control.Monad.Identity
 import Control.Monad.Reader
 -- either
 import Control.Monad.Trans.Either
+-- bifunctors
+import Data.Bifunctor
 -- trifecta
 import Text.Trifecta
 -- hspec
@@ -20,12 +22,13 @@ import Test.Hspec
 -- lens
 import Control.Lens
 -- coatl
-import Language.Coatl.Abstract
+import Language.Coatl.Parse.Syntax
 import Language.Coatl.Parse.Expression (expression)
 import Language.Coatl.Parse.Declaration (declaration)
 import Language.Coatl.Graph
 import Language.Coatl.Check
 import Language.Coatl.Check.Types
+import Language.Coatl.Check.Abstract
 import Language.Coatl.Check.Environment
 
 shouldParse :: Show a => Parser a -> String -> Expectation
@@ -207,7 +210,7 @@ checks = do
       it "allows polymorphic 'the'/'id'" $
         "{ _ => { x => x } }" `checksAs` "Type ~ { a => a -> a }"
   where
-    uniform = over annotations (const ()) . fmap canonicalize
+    uniform = first (const ()) . fmap canonicalize
     checksAs :: String -> String -> Expectation
     checksAs v s = case (,) <$> parseString expression mempty v
       <*> parseString expression mempty s of
@@ -217,7 +220,7 @@ checks = do
           . runEitherT
           . flip runReaderT (Environment id
             (M.singleton (Simple $ Name "a")
-            (CInferrable $ IReference () Type)))
+            (CInfer $ IReference () Type)))
           $ (,) <$> represent (uniform v')
                 <*> represent (uniform s') >>= uncurry check
     shouldError :: Show a => WithEnvironment a -> Expectation
