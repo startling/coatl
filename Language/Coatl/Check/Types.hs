@@ -43,17 +43,9 @@ check ::
   => Checkable a v -> Checkable b v -> ReaderT (Environment b v) m ()
 check (CLambda _ l) t = view named
   >>= \nd -> case preview (_CInferrable . binary nd) t of
-    Just (Function, _, a, b) -> withReaderT (add a . lower)
-      $ check l (fmap Just b)
+    Just (Function, _, a, b) -> with a $ check l (fmap Just b)
     Just (Dependent, _, _, _) -> throwError
       [printf "(~) unimplemented as of yet"]
     _ -> throwError ["Expected a function type"]
-  where
-    lower :: Ord v => Environment a v -> Environment a (Maybe v)
-    lower (Environment n ts) = Environment (_Just . n)
-      . M.mapKeys Just . M.map (fmap Just) $ ts
-    add :: Ord v => Checkable a v -> Environment a (Maybe v)
-      -> Environment a (Maybe v)
-    add c = set (types . at Nothing) (Just $ fmap Just c)
 check (CInferrable i) t = infer i >>= \it -> if it `equivalent` t
   then return () else throwError ["Type mismatch."] where

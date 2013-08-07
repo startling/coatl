@@ -12,7 +12,8 @@ import Control.Monad.Error
 -- containers
 import Data.Map (Map)
 import qualified Data.Map as M
--- transformers
+-- mtl
+import Control.Monad.Reader
 -- lens
 import Control.Lens
 -- coatl
@@ -110,3 +111,14 @@ binary nd = prism create decompose where
         Just c -> Right (c, s, a, b)
     elsewise -> Left elsewise
 
+-- | Run a checking action in an environment with something new
+--   as 'Nothing'.
+with :: Ord v
+  => Checkable a v
+  -> ReaderT (Environment a (Maybe v)) m b
+  -> ReaderT (Environment a v) m b
+with a = withReaderT (set (types . at Nothing)
+  (Just . fmap Just $ a) . lower) where
+    lower :: Ord v => Environment a v -> Environment a (Maybe v)
+    lower (Environment n ts) = Environment (_Just . n)
+      . M.mapKeys Just . M.map (fmap Just) $ ts
