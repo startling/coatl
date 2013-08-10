@@ -206,6 +206,26 @@ checks = do
         fails . checkNames $ example
       it "errors for `example` even with standard assumptions" $ do
         fails . assuming standard . checkNames $ example
+    describe "asGraph" $ do
+      let
+        g = asGraph $ declare
+          [ "x : Type ~ { a => a -> a };"
+          , "x _ a = a;"
+          , "y : x Type (a -> a);"
+          , "y n = x a n;"
+          ]
+        dependsOn a b = (g `shouldSatisfy`) $ \g -> elemOf (next g) b a
+      it "has definitions depend on corresponding signatures" $ do
+        forM_ [Simple $ Name "x", Simple $ Name "y"] $ \n ->
+          (False, n) `dependsOn` (True, n)
+      it "has type signatures depend on definitions" $ do
+        (True, Simple $ Name "y") `dependsOn` (False, Simple $ Name "x")
+      it "has type signatures depend on signatures" $ do
+        (True, Simple $ Name "y") `dependsOn` (True, Simple $ Name "x")
+      it "has definitions depend on definitions" $ do
+        (False, Simple $ Name "y") `dependsOn` (False, Simple $ Name "x")
+      it "has definitions depend on signatures" $ do
+        (False, Simple $ Name "y") `dependsOn` (True, Simple $ Name "x")
     describe "declarations" $ do
       it "errors for trivially unproductively-recursive functions" $ do
         let
