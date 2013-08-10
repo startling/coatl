@@ -15,6 +15,7 @@ import Control.Monad.Identity
 import Control.Monad.Error
 -- mtl
 import Control.Monad.Reader
+import Control.Monad.State
 -- either
 import Control.Monad.Trans.Either
 -- bifunctors
@@ -37,10 +38,27 @@ import Language.Coatl.Check.Environment
 import Language.Coatl.Evaluate
 
 shouldParse :: Show a => Parser a -> String -> Expectation
-shouldParse p s = parseString p mempty s `shouldSatisfy`
-  (\c -> case c of
-    Success _ -> True
-    Failure _ -> False )
+shouldParse p s = parseString p mempty s
+  `shouldSatisfy` has _Success
+
+run :: (?state :: s, ?read :: r)
+  => ReaderT r (StateT s (EitherT e Identity)) a -> Either e a
+run = runIdentity . runEitherT . flip evalStateT ?state
+  . flip runReaderT ?read
+
+succeeds :: (?state :: s, ?read :: r, Show e, Show a)
+  => ReaderT r (StateT s (EitherT e Identity)) a -> Expectation
+succeeds = (`shouldSatisfy` has _Right) . run
+
+fails :: (?state :: s, ?read :: r, Show e, Show a)
+  => ReaderT r (StateT s (EitherT e Identity)) a -> Expectation
+fails = (`shouldSatisfy` has _Left) . run
+
+declare :: [String] -> [Declaration Span Canonical]
+declare = map (fmap canonicalize)
+  . maybe (error "Parse error in example") id
+  . preview _Success . parseString (some declaration) mempty
+  . unlines
 
 parsing :: Spec
 parsing= do
@@ -158,18 +176,18 @@ graphs =
         sg `shouldSatisfy` (2 `before` 1)
     where
       rotations :: [a] -> [[a]]
-      rotations s = rotations' (length s) s
-      rotations' :: Int -> [a] -> [[a]]
-      rotations' 0 _ = []
-      rotations' _ [] = []
-      rotations' n (a : as) = let new = as ++ [a]
-        in new : rotations' (n - 1) new
+      rotations s = take (length s) $ iterate rotate s 
+      rotate :: [a] -> [a]
+      rotate s = case s of [] -> []; (c : cs) -> cs ++ [c];
       before a b [] = False
       before a b (s : ss) = if any ((== b) . fst) s then False
         else if any ((== a) . fst) s then True else before a b ss
 
 checks = do
   describe "Language.Coatl.Check" $ do
+    let
+      ?read = M.empty
+      ?state = M.empty
     let
       the = declare
         [ "the : Type ~ { a => a -> a};"
@@ -181,13 +199,13 @@ checks = do
         ]
     describe "checkNames" $ do
       it "errors for `the` without standard assumptions" $ do
-        shouldError . checkNames $ the
+        fails . checkNames $ the
       it "does not error for `the` with standard assumptions" $ do
-        shouldn'tError . assuming standard . checkNames $ the
+        succeeds . assuming standard . checkNames $ the
       it "errors for `example` without assumptions" $ do
-        shouldError . checkNames $ example
+        fails . checkNames $ example
       it "errors for `example` even with standard assumptions" $ do
-        shouldError . assuming standard . checkNames $ example
+        fails . assuming standard . checkNames $ example
     describe "declarations" $ do
       it "errors for trivially unproductively-recursive functions" $ do
         let
@@ -195,17 +213,15 @@ checks = do
             [ "bottom : Type ~ {a => a};"
             , "bottom = bottom;"
             ]
-        shouldError $ declarations bottom
+        fails $ declarations bottom
       it "should not error for `the`'s or `example`'s types or definitions" $ do
-        shouldn'tError . declarations $ the ++ example
+        succeeds . declarations $ the ++ example
       it "doesn't error for 'x = const O x'" $ do
         pendingWith "is this kind of thing worth the effort?"
-        let
-          x = declare
-            [ "x : Nat;"
-            , "x = const O x;"
-            ]
-        shouldn'tError . declarations $ x
+        fails . declarations $ declare
+          [ "x : Nat;"
+          , "x = const O x;"
+          ]
   describe "Language.Coatl.Check.Types" $ do
     describe "check" $ do
       it "allows monomorphic 'id'" $ do
@@ -215,31 +231,16 @@ checks = do
       it "allows polymorphic 'the'/'id'" $
         "{ _ => { x => x } }" `checksAs` "Type ~ { a => a -> a }"
   where
-    uniform = first (const ()) . fmap canonicalize
-    checksAs :: String -> String -> Expectation
-    checksAs v s = case (,) <$> parseString expression mempty v
-      <*> parseString expression mempty s of
-        Failure _ -> error ":("
-        Success (v', s') -> (`shouldSatisfy` has _Right)
-          . runIdentity
-          . runEitherT
-          . flip runReaderT (Environment id
-            (M.singleton (Simple $ Name "a")
-            (CInfer $ IReference () Type)))
-          $ (,) <$> represent (uniform v')
-                <*> represent (uniform s') >>= uncurry check
-    shouldError :: Show a => WithEnvironment a -> Expectation
-    shouldError m = shouldSatisfy (withEnvironment m)
-      $ \e -> case e of Left _ -> True; Right _ -> False;
-    shouldn'tError :: Show a => WithEnvironment a -> Expectation
-    shouldn'tError m = shouldSatisfy (withEnvironment m)
-      $ \e -> case e of Left _ -> False; Right _ -> True;
-    parse :: String -> Result [Declaration Span Canonical]
-    parse = fmap (map $ fmap canonicalize) . parseString (some declaration) mempty
-    declare :: [String] -> [Declaration Span Canonical]
-    declare as = case parse $ unlines as of
-      Success a -> a
-      Failure f -> error $ show f
+    parse = parseString expression mempty
+    checksAs v s = let
+      ?state = ()
+      ?read = Environment id (M.singleton (Simple $ Name "a")
+        (CInfer $ IReference () Type))
+      in succeeds $ do
+        (v', s') <- liftM (over both (first (const ()) . fmap canonicalize))
+          . maybe (throwError ["Parse error in example."]) return
+          . preview _Success $ (,) <$> parse v <*> parse s
+        (,) <$> represent v' <*> represent s' >>= uncurry check
 
 evaluation :: Spec
 evaluation = do
@@ -253,7 +254,7 @@ evaluation = do
           $ Construct (Just Nothing)
         const' = Lambda . Lambda . Construct . Just $ Nothing
       let
-        ?environment = M.fromList
+        ?read = M.fromList
           [ ( Simple $ Name "id", id' )
           , ( Simple $ Name "const", const' )
           , ( Simple $ Name "flip", flip' )
@@ -275,18 +276,16 @@ evaluation = do
   where
     evaluatesTo ::
       ( Show v, Ord v
-      , ?environment :: Map Canonical (Value v) )
+      , ?read :: Map Canonical (Value v) )
       => String -> Value v -> Expectation
-    evaluatesTo s v = (`shouldSatisfy` has _Right)
-      . runIdentity . runEitherT
-      . flip runReaderT ?environment
-        $ case parseString expression mempty s of
-          Failure f -> throwError
-            [printf "Parse failure on \"%s\"" (show s)]
-          Success c -> do
-            r <- represent (fmap canonicalize c)
-            e <- evaluate r
-            unless (e == v) $ throwError
+    evaluatesTo s v = let ?state = () in succeeds
+      $ case parseString expression mempty s of
+        Failure f -> throwError
+          [printf "Parse failure on \"%s\"" (show s)]
+        Success c -> do
+          r <- represent (fmap canonicalize c)
+          e <- evaluate r
+          unless (e == v) $ throwError
               [printf "%s /= %s" (show e) (show v)]
 
 main :: IO ()
