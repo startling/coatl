@@ -227,9 +227,9 @@ checks = do
       it "allows monomorphic 'id'" $ do
         "{ x => x }" `checksAs` "a -> a"
       it "allows monomorphic 'const'" $ do
-        "{ x => { _ => x } }" `checksAs` "a -> a -> a"
+        "{ x _ => x }" `checksAs` "a -> a -> a"
       it "allows polymorphic 'the'/'id'" $
-        "{ _ => { x => x } }" `checksAs` "Type ~ { a => a -> a }"
+        "{ _ x => x }" `checksAs` "Type ~ { a => a -> a }"
   where
     parse = parseString expression mempty
     checksAs v s = let
