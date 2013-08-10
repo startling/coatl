@@ -51,7 +51,7 @@ substitute a = flip runReader (maybe a Construct) . sub where
   sub :: Ord n => Value a -> Reader (a -> Value n) (Value n)
   sub (Construct c) = ($ c) `liftM` ask
   sub (Applied a b) = sub a >>= \a' -> sub b >>= \b' ->
-    return $ case b' of
+    return $ case a' of
       Lambda e -> substitute b' e
       elsewise -> Applied elsewise b'
   sub (Lambda e) = Lambda `liftM` withReader
