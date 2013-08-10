@@ -238,7 +238,7 @@ checks = do
         succeeds . declarations $ the ++ example
       it "doesn't error for 'x = const O x'" $ do
         pendingWith "is this kind of thing worth the effort?"
-        fails . declarations $ declare
+        succeeds . declarations $ declare
           [ "x : Nat;"
           , "x = const O x;"
           ]
