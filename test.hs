@@ -187,7 +187,7 @@ checks = do
   describe "Language.Coatl.Check" $ do
     let
       ?read = M.empty
-      ?state = M.empty
+      ?state = (M.empty, M.empty)
     let
       the = declare
         [ "the : Type ~ { a => a -> a};"

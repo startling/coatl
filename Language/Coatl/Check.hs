@@ -66,8 +66,10 @@ import Text.Trifecta
 -- coatl
 import Language.Coatl.Graph
 import Language.Coatl.Parse.Syntax
+import Language.Coatl.Evaluate
 import Language.Coatl.Check.Abstract
-import Language.Coatl.Check.Environment hiding (Environment)
+import Language.Coatl.Check.Environment
+import Language.Coatl.Check.Types
 
 -- | Run an environment-dependent action with an addition to the environment.
 assuming :: (Ord k, MonadReader (Map k v) m) => [(k, v)] -> m a -> m a
@@ -141,27 +143,40 @@ asGraph = connections (has _Signature &&& view lhs) deps where
 
 -- | Check a list of declarations and read them into the environment.
 declarations ::
-  ( MonadState (Map Canonical (Syntax (Maybe Span) Canonical)) m
-  , MonadError [String] m )
-  => [Declaration Span Canonical] -> m ()
-declarations = mapM_ (collect check) <=<
+  ( MonadError [String] m
+  , MonadState
+    ( Map Canonical (Value Canonical)
+    , Map Canonical (Value Canonical)) m )
+  => [Declaration a Canonical] -> m ()
+declarations = mapM_ (collect checkd) <=<
   either (throwError . (: []) . show) return . sort . asGraph where
-    check a = if has _Signature a
-      then view rhs a `checkAs` SReference Nothing Type
-      else use (at (view lhs a))
-        >>= maybe (throwError ["INTERNAL ERROR"])
-          (view rhs a `checkAs`)
-
--- | Check whether some expression makes sense as a given type;
---   this assumes the type is in normal form.
--- 
---   TODO
-checkAs ::
-  ( MonadError [String] m )
-  => Syntax Span Canonical
-  -> Syntax (Maybe Span) Canonical
-  -> m (Syntax (Maybe Span) Canonical)
-checkAs expr ty = undefined
+    checkd a = if has _Signature a
+      then checkSignature (view lhs a) (view rhs a)
+      else checkDefinition (view lhs a) (view rhs a)
+    checkSignature l r = get >>= \s -> do
+      -- Find the representation of signature.
+      r' <- represent r
+      -- Check that the signature has type 'Type'.
+      runReaderT (check r' $ Construct Type)
+        (uncurry (Environment id) s)
+      -- Evaluate the signature.
+      v <- runReaderT (evaluate r') (snd s)
+      -- Set the signature at this lhs to the value.
+      (_1 . at l) .= Just v
+    checkDefinition l r = get >>= \s -> do
+      -- Find the representation of the definition.
+      r' <- represent r
+      -- Find the type signature corresponding to this
+      -- definition.
+      ts <- use (_2 . at l) >>= flip maybe return
+        (throwError ["Something's wrong."])
+      -- Check that the value of the definition checks
+      -- as that type.
+      runReaderT (check r' ts) (uncurry (Environment id) s)
+      -- Evaluate the type.
+      v <- runReaderT (evaluate r') (snd s)
+      -- Set the value.
+      (_2 . at l) .= Just v
 
 -- | Conservatively check for partiality: if a declaration references
 --   anything that references itself, throw an error.
