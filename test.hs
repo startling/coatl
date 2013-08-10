@@ -235,7 +235,7 @@ checks = do
     checksAs v s = let
       ?state = ()
       ?read = Environment id (M.singleton (Simple $ Name "a")
-        (Construct Type))
+        (Construct Type)) M.empty
       in succeeds $ do
         (v', s') <- liftM (over both (first (const ()) . fmap canonicalize))
           . maybe (throwError ["Parse error in example."]) return

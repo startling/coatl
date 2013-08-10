@@ -39,11 +39,13 @@ represent (SApplication a b) = (,) `liftM` represent a `ap` represent b
     Nothing -> throwError ["Term is not inferrable"]
 
 data Environment a v = Environment
-  { _named   :: APrism' v Canonical
+  { _named       :: APrism' v Canonical
     -- ^ A prism into the 'Canonical' in the symbol type.
-  , _types   :: Map v (Value v)
+  , _types       :: Map v (Value v)
     -- ^ The types of things that have already been checked
     --   in the environment. They should be in normal form.
+  , _definitions :: Map v (Value v)
+    -- ^ The values already defined.
   }
 makeLenses ''Environment
 
@@ -69,5 +71,6 @@ with :: Ord v
 with a = withReaderT (set (types . at Nothing)
   (Just . fmap Just $ a) . lower) where
     lower :: Ord v => Environment a v -> Environment a (Maybe v)
-    lower (Environment n ts) = Environment (_Just . n)
-      . M.mapKeys Just . M.map (fmap Just) $ ts
+    lower (Environment n ts ds) = Environment (_Just . n)
+      (M.mapKeys Just . M.map (fmap Just) $ ts)
+      (M.mapKeys Just . M.map (fmap Just) $ ds)

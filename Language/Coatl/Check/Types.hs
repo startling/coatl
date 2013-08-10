@@ -31,13 +31,11 @@ infer (IApplication f ar) = view named >>= \nd ->
   infer f >>= \ft ->
     case preview (binary nd) ft of
       Just (Function, a, b) -> check ar a >> return b
-      Just (Dependent, a, b) -> throwError
-        [printf "(~) unimplemented as of yet"]
-      _ -> report
-  where
-    report :: MonadError [String] m => m a
-    report = throwError
-      [printf "Expected a function type."]
+      Just (Dependent, a, b) -> check ar a
+        >> (reduce . Applied b) `liftM`
+          magnify definitions (evaluate ar)
+      _ -> throwError
+        [printf "Expected a function type: %s" (show ft)]
 
 -- | Check the type of some 'Check' term.
 check ::
@@ -46,9 +44,13 @@ check ::
   => Check a v -> Value v -> ReaderT (Environment b v) m ()
 check (CLambda _ l) t = view named
   >>= \nd -> case preview (binary nd) t of
+    -- If we're checking this lambda form as a function,
+    -- check that the function body type-checks as the result type
+    -- with a parameter of the argument type.
     Just (Function, a, b) -> with a $ check l (fmap Just b)
-    Just (Dependent, _, _) -> throwError
-      [printf "(~) unimplemented as of yet"]
-    _ -> throwError ["Expected a function type"]
+    Just (Dependent, a, b) -> with a $ check l
+      (reduce $ Applied (fmap Just b) (Construct Nothing))
+    a -> throwError
+      [printf "Expected a function type: %s" (show t)]
 check (CInfer i) t = infer i >>= \it -> if it == t
   then return () else throwError ["Type mismatch."] where

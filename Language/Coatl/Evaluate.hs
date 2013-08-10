@@ -50,9 +50,14 @@ substitute :: Value n -> Value (Maybe n) -> Value n
 substitute a = flip runReader (maybe a Construct) . sub where
   sub :: Value a -> Reader (a -> Value n) (Value n)
   sub (Construct c) = ($ c) `liftM` ask
-  sub (Applied a b) = sub a >>= \a' -> sub b >>= \b' ->
-    return $ case a' of
-      Lambda e -> substitute b' e
-      elsewise -> Applied elsewise b'
+  sub (Applied a b) = reduce <$> (Applied <$> sub a <*> sub b)
   sub (Lambda e) = Lambda `liftM` withReader
     (maybe (Construct Nothing) . (fmap Just .)) (sub e)
+
+reduce :: Value n -> Value n
+reduce (Construct n) = Construct n
+reduce (Lambda e) = Lambda e
+reduce (Applied a b) = let b' = reduce b in
+  case reduce a of
+    Lambda e -> substitute b' e
+    elsewise -> Applied elsewise b'
