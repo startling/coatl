@@ -69,29 +69,8 @@ import Language.Coatl.Parse.Syntax
 import Language.Coatl.Check.Abstract
 import Language.Coatl.Check.Environment hiding (Environment)
 
--- | A type representing the things in our checking environment.
-type Environment = Map Canonical (Syntax (Maybe Span) Canonical)
-
-type WithEnvironmentT m a = ReaderT Environment
-  (StateT Environment (EitherT [String] m)) a
-
-type WithEnvironment a = WithEnvironmentT Identity a
-
--- | Evaluate an environment-dependent action in some 'Monad'.
-withEnvironmentT :: Monad m
-  => WithEnvironmentT m a -> m (Either [String] Environment)
-withEnvironmentT r = runEitherT . flip execStateT mempty 
-  $ runReaderT r mempty
-
--- | Evaluate an environment-dependent action.
-withEnvironment :: WithEnvironment a -> Either [String] Environment
-withEnvironment = runIdentity . withEnvironmentT
-
--- | Run an environment-dependant action with an addition to the environment.
-assuming ::
-  ( MonadReader Environment m
-  , MonadError [String] m )
-  => [(Canonical, Syntax (Maybe Span) Canonical)] -> m a -> m a
+-- | Run an environment-dependent action with an addition to the environment.
+assuming :: (Ord k, MonadReader (Map k v) m) => [(k, v)] -> m a -> m a
 assuming as = local $ \e -> e <> M.fromList as
 
 -- | The standard environment. We have the following types:
@@ -133,9 +112,9 @@ collect f = mapM (runEitherT . f) . toList
 -- | Check that all the references in an expression exist either
 --   in the environment or in a given list.
 checkNames ::
-  ( MonadReader Environment m
-  , MonadError [String] m )
-  => [Declaration a Canonical] -> m ()
+  ( Ord v, Show v, MonadError [String] m
+  , MonadReader (Map v a) m )
+  => [Declaration k v] -> m ()
 checkNames ds = ask >>= \env ->
   forM_ ds $ mapMOf_ (rhs . traverse)
     $ \r -> unless (r `M.member` env || any ((r ==) . view lhs) ds)
@@ -162,7 +141,7 @@ asGraph = connections (has _Signature &&& view lhs) deps where
 
 -- | Check a list of declarations and read them into the environment.
 declarations ::
-  ( MonadState Environment m
+  ( MonadState (Map Canonical (Syntax (Maybe Span) Canonical)) m
   , MonadError [String] m )
   => [Declaration Span Canonical] -> m ()
 declarations = mapM_ (collect check) <=<
@@ -178,8 +157,7 @@ declarations = mapM_ (collect check) <=<
 -- 
 --   TODO
 checkAs ::
-  ( MonadState Environment m
-  , MonadError [String] m )
+  ( MonadError [String] m )
   => Syntax Span Canonical
   -> Syntax (Maybe Span) Canonical
   -> m (Syntax (Maybe Span) Canonical)
@@ -189,8 +167,8 @@ checkAs expr ty = undefined
 --   anything that references itself, throw an error.
 --
 --   This should probably be improved eventually.
-checkTotality :: (MonadReader Environment m, MonadError [String] m)
-  => [(Canonical, Syntax a Canonical)] -> Canonical -> m ()
+checkTotality :: (Ord a, Show a, Foldable t, MonadError [String] m)
+  => [(a, t a)] -> a -> m ()
 checkTotality cs c = let
   graph = map (fmap toList) cs
   in if path (associations graph) c c
