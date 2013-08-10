@@ -23,14 +23,8 @@
 module Language.Coatl.Parse.Expression where
 -- base
 import Control.Applicative
-import Data.Char
--- containers
-import qualified Data.HashSet as H
--- mtl
-import Control.Monad.Reader
 -- parsers
 import Text.Parser.Expression
-import qualified Text.Parser.Token.Highlight as Highlight
 -- trifecta
 import Text.Trifecta
 -- coatl

@@ -1,12 +1,6 @@
-{-# Language GeneralizedNewtypeDeriving #-}
 module Language.Coatl.Parse.Declaration where
 -- base
 import Control.Applicative
-import Control.Monad
--- transformers
-import Control.Monad.Trans
--- mtl
-import Control.Monad.State
 -- trifecta
 import Text.Trifecta
 -- coatl
@@ -31,4 +25,3 @@ declaration :: DeltaParsing f => f (Declaration Span Identifier)
 declaration =
        ((try signature <?> "type signature")
     <|> (try definition <?> "definition")) <* semi
-
