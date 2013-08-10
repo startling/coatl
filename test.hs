@@ -247,11 +247,16 @@ evaluation = do
     describe "evaluate" $ do
       let
         id' = Lambda $ Construct Nothing
+        flip' = Lambda . Lambda . Lambda
+          . Applied (Applied (Construct . Just . Just $ Nothing)
+            $ Construct Nothing)
+          $ Construct (Just Nothing)
         const' = Lambda . Lambda . Construct . Just $ Nothing
       let
         ?environment = M.fromList
           [ ( Simple $ Name "id", id' )
           , ( Simple $ Name "const", const' )
+          , ( Simple $ Name "flip", flip' )
           , ( Simple $ Name "a", Construct "a" )
           , ( Simple $ Name "b", Construct "b" )
           ]
@@ -263,6 +268,10 @@ evaluation = do
         "{a _ => a}" `evaluatesTo` const'
       it "evaluates applications of monomorphic 'const' correctly" $ do
         "const a b" `evaluatesTo` Construct "a"
+      it "evaluate monomorphic 'flip' correctly" $ do
+        "{f b a => f a b}" `evaluatesTo` flip'
+      it "evaluates applications of monomorphic 'flip' correctly" $ do
+        "flip const a b" `evaluatesTo` Construct "b"
   where
     evaluatesTo ::
       ( Show v, Ord v
