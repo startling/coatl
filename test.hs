@@ -256,6 +256,7 @@ evaluation = do
     describe "evaluate" $ do
       let
         id' = Lambda $ Construct Nothing
+        id'' = Lambda . Lambda $ Construct Nothing 
         flip' = Lambda . Lambda . Lambda
           . Applied (Applied (Construct . Just . Just $ Nothing)
             $ Construct Nothing)
@@ -264,8 +265,10 @@ evaluation = do
       let
         ?read = M.fromList
           [ ( Simple $ Name "id", id' )
+          , ( Simple $ Name "id'", id'' )
           , ( Simple $ Name "const", const' )
           , ( Simple $ Name "flip", flip' )
+          , ( Simple $ Name "A", Construct "A" )
           , ( Simple $ Name "a", Construct "a" )
           , ( Simple $ Name "b", Construct "b" )
           ]
@@ -281,6 +284,10 @@ evaluation = do
         "{f b a => f a b}" `evaluatesTo` flip'
       it "evaluates applications of monomorphic 'flip' correctly" $ do
         "flip const a b" `evaluatesTo` Construct "b"
+      it "evaluates polymorphic 'id' correctly" $ do
+        "{_ a => a}" `evaluatesTo` id''
+      it "evaluates applications of polymorphic 'id' correctly" $ do
+        "id' A a" `evaluatesTo` Construct "a"
   where
     evaluatesTo ::
       ( Show v, Ord v
