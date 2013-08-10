@@ -235,12 +235,20 @@ checks = do
     checksAs v s = let
       ?state = ()
       ?read = Environment id (M.singleton (Simple $ Name "a")
-        (CInfer $ IReference () Type))
+        (Construct Type))
       in succeeds $ do
         (v', s') <- liftM (over both (first (const ()) . fmap canonicalize))
           . maybe (throwError ["Parse error in example."]) return
           . preview _Success $ (,) <$> parse v <*> parse s
-        (,) <$> represent v' <*> represent s' >>= uncurry check
+        s'' <- represent s' >>= \rs -> runReaderT (evaluate $ rs)
+          (M.fromList
+            [ (Type, Construct Type)
+            , (Dependent, Construct Dependent)
+            , (Function, Construct Function)
+            , (Simple $ Name "a", Construct (Simple $ Name "a"))
+            ])
+        represent v' >>= (`check` s'')
+        return ()
 
 evaluation :: Spec
 evaluation = do
