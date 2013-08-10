@@ -18,6 +18,7 @@ import Control.Monad.Reader
 import Control.Lens
 -- coatl
 import Language.Coatl.Parse.Syntax
+import Language.Coatl.Evaluate
 import Language.Coatl.Check.Abstract
 
 -- | Change an identifier into its canonical representation.
@@ -26,18 +27,6 @@ canonicalize (Operator "->") = Function
 canonicalize (Operator "~") = Dependent
 canonicalize (Name "Type") = Type
 canonicalize o = Simple o
-
-
--- | Check that two 'Check' are equal but for annotations.
-equivalent :: Eq v => Check a v -> Check b v -> Bool
-equivalent (CLambda _ l) (CLambda _ m) = l `equivalent` m
-equivalent (CInfer r) (CInfer s) = r `eq'` s where
-  eq' :: Eq v => Infer a v -> Infer b v -> Bool
-  eq' (IReference _ v) (IReference _ w) = v == w
-  eq' (IApplication a b) (IApplication c d) = a `eq'` c
-    && b `equivalent` d
-  eq' _ _ = False
-equivalent _ _ = False
 
 -- | Represent some 'Expression' as a 'Check'.
 represent :: (MonadError [String] m) => Syntax a v
@@ -52,30 +41,29 @@ represent (SApplication a b) = (,) `liftM` represent a `ap` represent b
 data Environment a v = Environment
   { _named   :: APrism' v Canonical
     -- ^ A prism into the 'Canonical' in the symbol type.
-  , _types   :: Map v (Check a v)
+  , _types   :: Map v (Value v)
     -- ^ The types of things that have already been checked
     --   in the environment. They should be in normal form.
   }
 makeLenses ''Environment
 
--- | A Prism on binary application.
-binary :: APrism' v Canonical -> Simple Prism (Infer a v)
-  (Canonical, a, Check a v, Check a v)
+-- | A Prism on binary application of constructors.
+binary :: APrism' v Canonical -> Simple Prism (Value v)
+  (Canonical, Value v, Value v)
 binary nd = prism create decompose where
-  create (c, s, a, b) = IApplication
-    (IApplication (IReference s
-      (view (re $ clonePrism nd) c)) a) b
+  create (c, a, b) = Applied
+    (Applied (Construct (view (re $ clonePrism nd) c)) a) b
   decompose ck = case ck of
-    i@(IApplication (IApplication (IReference s n) a) b) ->
-      case preview (clonePrism nd) n of
+    i@(Applied (Applied (Construct c) a) b) ->
+      case preview (clonePrism nd) c of
         Nothing -> Left i
-        Just c -> Right (c, s, a, b)
+        Just c -> Right (c, a, b)
     elsewise -> Left elsewise
 
 -- | Run a checking action in an environment with something new
 --   as 'Nothing'.
 with :: Ord v
-  => Check a v
+  => Value v
   -> ReaderT (Environment a (Maybe v)) m b
   -> ReaderT (Environment a v) m b
 with a = withReaderT (set (types . at Nothing)
