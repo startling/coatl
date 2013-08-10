@@ -19,10 +19,7 @@ import Control.Lens
 import Language.Coatl.Check.Abstract
 
 data Value n
-  = Star
-  | Arrow
-  | Lambda (Value (Maybe n))
-  | Pi (Value n) (Value (Maybe n))
+  = Lambda (Value (Maybe n))
   | Applied (Value n) (Value n)
   | Construct n
   deriving
@@ -45,25 +42,18 @@ evaluate (CInfer (IReference _ v)) = view (at v) >>= flip maybe return
       (show v) ])
 evaluate (CInfer (IApplication f a)) = evaluate (CInfer f)
   >>= \f' -> evaluate a >>= \a' -> case f' of
-    Pi _ n -> return $ substitute a' n
     Lambda n -> return $ substitute a' n
     Construct c -> return $ Applied (Construct c) a'
     Applied a b -> return $ Applied (Applied a b) a'
-    _ -> throwError ["Application of non-function."]
 
 substitute :: Ord n => Value n -> Value (Maybe n) -> Value n
 substitute a = flip runReader (maybe a Construct) . sub where
   sub :: Ord n => Value a -> Reader (a -> Value n) (Value n)
-  sub Star = return Star
-  sub Arrow = return Arrow
   sub (Construct c) = ($ c) `liftM` ask
   sub (Applied a b) = sub a >>= \a' -> sub b >>= \b' ->
     return $ case b' of
-      Pi a e -> substitute b' e
       Lambda e -> substitute b' e
       elsewise -> Applied elsewise b'
   sub (Lambda e) = Lambda `liftM` withReader
     (maybe (Construct Nothing) . (fmap Just .)) (sub e)
-  sub (Pi a n) = Pi `liftM` sub a `ap` withReader
-    (maybe (Construct Nothing) . (fmap Just .)) (sub n)
 
