@@ -1,14 +1,18 @@
+{-# Language ImplicitParams #-}
 module Main where
 -- base
 import Data.Monoid
 import Control.Applicative
 import Control.Monad
+import Text.Printf
 -- containers
 import Data.Set (Set)
 import qualified Data.Set as S
+import Data.Map (Map)
 import qualified Data.Map as M
 -- transformers
 import Control.Monad.Identity
+import Control.Monad.Error
 -- mtl
 import Control.Monad.Reader
 -- either
@@ -30,6 +34,7 @@ import Language.Coatl.Check
 import Language.Coatl.Check.Types
 import Language.Coatl.Check.Abstract
 import Language.Coatl.Check.Environment
+import Language.Coatl.Evaluate
 
 shouldParse :: Show a => Parser a -> String -> Expectation
 shouldParse p s = parseString p mempty s `shouldSatisfy`
@@ -236,10 +241,50 @@ checks = do
       Success a -> a
       Failure f -> error $ show f
 
+evaluation :: Spec
+evaluation = do
+  describe "Language.Coatl.Evaluate" $ do
+    describe "evaluate" $ do
+      let
+        id' = Lambda $ Construct Nothing
+        const' = Lambda . Lambda . Construct . Just $ Nothing
+      let
+        ?environment = M.fromList
+          [ ( Simple $ Name "id", id' )
+          , ( Simple $ Name "const", const' )
+          , ( Simple $ Name "a", Construct "a" )
+          , ( Simple $ Name "b", Construct "b" )
+          ]
+      it "evaluates monomorphic 'id' correctly" $ do
+        "{a => a}" `evaluatesTo` id'
+      it "evaluates applications of monomorphic 'id' correctly" $ do
+        "id a" `evaluatesTo` Construct "a"
+      it "evaluates monomorphic 'const' correctly" $ do
+        "{a _ => a}" `evaluatesTo` const'
+      it "evaluates applications of monomorphic 'const' correctly" $ do
+        "const a b" `evaluatesTo` Construct "a"
+  where
+    evaluatesTo ::
+      ( Show v, Ord v
+      , ?environment :: Map Canonical (Value v) )
+      => String -> Value v -> Expectation
+    evaluatesTo s v = (`shouldSatisfy` has _Right)
+      . runIdentity . runEitherT
+      . flip runReaderT ?environment
+        $ case parseString expression mempty s of
+          Failure f -> throwError
+            [printf "Parse failure on \"%s\"" (show s)]
+          Success c -> do
+            r <- represent (fmap canonicalize c)
+            e <- evaluate r
+            unless (e == v) $ throwError
+              [printf "%s /= %s" (show e) (show v)]
+
 main :: IO ()
 main = hspec . sequence_ $
   [ parsing
   , graphs
   , checks
+  , evaluation
   ]
 
