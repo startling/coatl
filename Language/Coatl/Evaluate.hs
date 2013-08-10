@@ -30,7 +30,7 @@ data Value n
   )
 
 evaluate ::
-  ( Ord v, Show v, Ord n
+  ( Ord v, Show v
   , MonadError [String] m )
   => Check a v -> ReaderT (Map v (Value n)) m (Value n)
 evaluate (CLambda _ n) = Lambda `liftM` withReaderT
@@ -46,9 +46,9 @@ evaluate (CInfer (IApplication f a)) = evaluate (CInfer f)
     Construct c -> return $ Applied (Construct c) a'
     Applied a b -> return $ Applied (Applied a b) a'
 
-substitute :: Ord n => Value n -> Value (Maybe n) -> Value n
+substitute :: Value n -> Value (Maybe n) -> Value n
 substitute a = flip runReader (maybe a Construct) . sub where
-  sub :: Ord n => Value a -> Reader (a -> Value n) (Value n)
+  sub :: Value a -> Reader (a -> Value n) (Value n)
   sub (Construct c) = ($ c) `liftM` ask
   sub (Applied a b) = sub a >>= \a' -> sub b >>= \b' ->
     return $ case a' of
@@ -56,4 +56,3 @@ substitute a = flip runReader (maybe a Construct) . sub where
       elsewise -> Applied elsewise b'
   sub (Lambda e) = Lambda `liftM` withReader
     (maybe (Construct Nothing) . (fmap Just .)) (sub e)
-
