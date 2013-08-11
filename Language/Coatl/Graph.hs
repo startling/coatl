@@ -104,10 +104,11 @@ sort g = let cs = cycles g in
     -- Fold over the identifiers whose nodes only point to
     -- the given identifiers and that are not one of them.
     only' :: Ord k => Set k -> IndexedFold k (Graph k n) n
-    only' s f g@(Graph a _) = (g <$) . flip ifolded g . Indexed
-      $ \i n -> if i `S.notMember` s && allOf a (`S.member` s) n
-        then indexed f i n
-        else pure n
+    only' s f g@(Graph a ns) = (g <$) . flip ifolded g . Indexed
+      $ \i n -> if i `S.notMember` s && allOf a
+        (\x -> x `S.member` s || x `M.notMember` ns) n
+          then indexed f i n
+          else pure n
     -- Find the nodes that only depend on the nodes already
     -- checked and that have not been already checked.
     new = get >>= \already -> let
