@@ -12,9 +12,7 @@ import Language.Coatl.Abstract
 import Language.Coatl.Evaluate
 
 data Environment a v = Environment
-  { _named       :: APrism' v Canonical
-    -- ^ A prism into the 'Canonical' in the symbol type.
-  , _types       :: Map v (Value v)
+  { _types       :: Map v (Value v)
     -- ^ The types of things that have already been checked
     --   in the environment. They should be in normal form.
   , _definitions :: Map v (Value v)
@@ -22,15 +20,24 @@ data Environment a v = Environment
   }
 makeLenses ''Environment
 
+data Checking a v = Checking
+  { _named       :: APrism' v Canonical
+    -- ^ A prism into the 'Canonical' in the symbol type.
+  , _environment :: Environment a v
+    -- ^ The environment.
+  }
+makeLenses ''Checking
+
 -- | Run a checking action in an environment with something new
 --   as 'Nothing'.
 with :: Ord v
   => Value v
-  -> ReaderT (Environment a (Maybe v)) m b
-  -> ReaderT (Environment a v) m b
-with a = withReaderT (set (types . at Nothing)
+  -> ReaderT (Checking a (Maybe v)) m b
+  -> ReaderT (Checking a v) m b
+with a = withReaderT (set (environment . types . at Nothing)
   (Just . fmap Just $ a) . lower) where
-    lower :: Ord v => Environment a v -> Environment a (Maybe v)
-    lower (Environment n ts ds) = Environment (_Just . n)
-      (M.mapKeys Just . M.map (fmap Just) $ ts)
-      (M.mapKeys Just . M.map (fmap Just) $ ds)
+    lower :: Ord v => Checking a v -> Checking a (Maybe v)
+    lower (Checking n (Environment ts ds)) = Checking (_Just . n)
+      $ Environment
+        (M.mapKeys Just . M.map (fmap Just) $ ts)
+        (M.mapKeys Just . M.map (fmap Just) $ ds)

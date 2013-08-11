@@ -255,8 +255,7 @@ checks = do
     parse = parseString expression mempty
     checksAs v s = let
       ?state = ()
-      ?read = Environment id (M.singleton (Simple $ Name "a")
-        (Construct Type)) M.empty
+      ?read = Checking id $ uncurry Environment standard
       in succeeds $ do
         (v', s') <- liftM (over both (first (const ()) . fmap canonicalize))
           . maybe (throwError ["Parse error in example."]) return

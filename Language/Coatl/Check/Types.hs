@@ -21,8 +21,8 @@ import Language.Coatl.Check.Environment
 infer ::
   ( Ord v, Show v
   , MonadError [String] m )
-  => Infer b v -> ReaderT (Environment a v) m (Value v)
-infer (IReference _ v) = view (types . at v)
+  => Infer b v -> ReaderT (Checking a v) m (Value v)
+infer (IReference _ v) = view (environment . types . at v)
   >>= maybe report return where
     report :: MonadError [String] m => m a
     report = throwError
@@ -33,7 +33,7 @@ infer (IApplication f ar) = view named >>= \nd ->
       Just (Function, a, b) -> check ar a >> return b
       Just (Dependent, a, b) -> check ar a
         >> (reduce . Applied b) `liftM`
-          magnify definitions (evaluate ar)
+          magnify (environment . definitions) (evaluate ar)
       _ -> throwError
         [printf "Expected a function type: %s" (show ft)]
 
@@ -41,7 +41,7 @@ infer (IApplication f ar) = view named >>= \nd ->
 check ::
   ( Ord v, Show v
   , MonadError [String] m )
-  => Check a v -> Value v -> ReaderT (Environment b v) m ()
+  => Check a v -> Value v -> ReaderT (Checking b v) m ()
 check (CLambda _ l) t = view named
   >>= \nd -> case preview (binary nd) t of
     -- If we're checking this lambda form as a function,

@@ -137,7 +137,7 @@ checkDeclaration a = if has _Signature a
       r' <- represent r
       -- Check that the signature has type 'Type'.
       runReaderT (check r' $ Construct Type)
-        (uncurry (Environment id) s)
+        (Checking id $ uncurry Environment s)
       -- Evaluate the signature.
       v <- runReaderT (evaluate r') (snd s)
       -- Set the signature at this lhs to the value.
@@ -151,7 +151,7 @@ checkDeclaration a = if has _Signature a
         (throwError ["Something's wrong."])
       -- Check that the value of the definition checks
       -- as that type.
-      runReaderT (check r' ts) (uncurry (Environment id) s)
+      runReaderT (check r' ts) (Checking id $ uncurry Environment s)
       -- Evaluate the type.
       v <- runReaderT (evaluate r') (snd s)
       -- Set the value.
