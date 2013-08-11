@@ -27,9 +27,7 @@ import Test.Hspec
 -- lens
 import Control.Lens
 -- coatl
-import Language.Coatl.Parse.Syntax
-import Language.Coatl.Parse.Expression (expression)
-import Language.Coatl.Parse.Declaration (declaration)
+import Language.Coatl.Parse
 import Language.Coatl.Graph
 import Language.Coatl.Check
 import Language.Coatl.Check.Types
