@@ -257,28 +257,36 @@ checks = do
           ]
   describe "Language.Coatl.Check.Types" $ do
     describe "check" $ do
+      it "allows the type of monomorphic 'id'" $ do
+        "a -> a" `checksAs` "Type"
       it "allows monomorphic 'id'" $ do
         "{ x => x }" `checksAs` "a -> a"
+      it "allows the type of monomorphic 'const'" $ do
+        "a -> a -> a" `checksAs` "Type"
       it "allows monomorphic 'const'" $ do
         "{ x _ => x }" `checksAs` "a -> a -> a"
+      it "allows polymorphic 'the'/'id''s type" $ do
+        "Type ~ { a => a -> a }" `checksAs` "Type"
       it "allows polymorphic 'the'/'id'" $
         "{ _ x => x }" `checksAs` "Type ~ { a => a -> a }"
   where
     parse = parseString expression mempty
     checksAs v s = let
       ?state = ()
-      ?read = Checking id standard
+      ?read = Checking id
+          . set (types . at (Simple $ Name "a")) (Just $ Construct Type)
+          . set (definitions . at (Simple $ Name "a"))
+            (Just . Construct . Simple . Name $ "a")
+          $ standard
       in succeeds $ do
+        -- Parse both expressions
         (v', s') <- liftM (over both (first (const ()) . fmap canonicalize))
           . maybe (throwError ["Parse error in example."]) return
           . preview _Success $ (,) <$> parse v <*> parse s
-        s'' <- represent s' >>= \rs -> runReaderT (evaluate $ rs)
-          (M.fromList
-            [ (Type, Construct Type)
-            , (Dependent, Construct Dependent)
-            , (Function, Construct Function)
-            , (Simple $ Name "a", Construct (Simple $ Name "a"))
-            ])
+        -- Fully evaluate the type we're checking as.
+        s'' <- represent s' >>= \rs ->
+          view (environment . definitions)
+            >>= runReaderT (evaluate $ rs)
         represent v' >>= (`check` s'')
         return ()
 
