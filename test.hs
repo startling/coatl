@@ -33,7 +33,6 @@ import Language.Coatl.Abstract
 import Language.Coatl.Parse
 import Language.Coatl.Check
 import Language.Coatl.Check.Types
-import Language.Coatl.Check.Environment
 import Language.Coatl.Evaluate
 
 shouldParse :: Show a => Parser a -> String -> Expectation

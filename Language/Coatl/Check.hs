@@ -68,7 +68,6 @@ import Language.Coatl.Graph
 import Language.Coatl.Syntax
 import Language.Coatl.Abstract
 import Language.Coatl.Evaluate
-import Language.Coatl.Check.Environment
 import Language.Coatl.Check.Types
 
 -- | Run a number of 'EitherT e m b' with the same error state,
