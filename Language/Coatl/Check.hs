@@ -119,6 +119,8 @@ declarations ::
 declarations = mapM_ (collect checkDeclaration) <=<
   either (throwError . pure . show) return . sort . asGraph
 
+-- | Check that every name in some 'foldable' has a definition
+--   and a type signature in the environment.
 names ::
   ( Ord v, Show v
   , Foldable t
@@ -164,8 +166,8 @@ checkDeclaration (Definition _ l r) = get >>= \s -> do
   r' <- represent r
   -- Find the type signature corresponding to this
   -- definition.
-  ts <- use (definitions . at l) >>= flip maybe return
-    (throwError ["Something's wrong."])
+  ts <- use (types . at l) >>= flip maybe return
+    (throwError ["Something's wrong: " ++ show l])
   -- Check that the value of the definition checks
   -- as that type.
   runReaderT (check r' ts) (Checking id s)
