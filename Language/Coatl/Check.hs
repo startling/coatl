@@ -117,11 +117,21 @@ declarations ::
     ( Map Canonical (Value Canonical)
     , Map Canonical (Value Canonical)) m )
   => [Declaration a Canonical] -> m ()
-declarations = mapM_ (collect checkd) <=<
+declarations = mapM_ (collect checkDeclaration) <=<
   either (throwError . (: []) . show) return . sort . asGraph where
-    checkd a = if has _Signature a
-      then checkSignature (view lhs a) (view rhs a)
-      else checkDefinition (view lhs a) (view rhs a)
+
+-- | Check a declaration and read it into the environment, assuming
+--   that, if it is a 'Definition', its type signature is present
+--   in the first part of the environment.
+checkDeclaration ::
+  ( MonadError [String] m
+  , MonadState
+    ( Map Canonical (Value Canonical)
+    , Map Canonical (Value Canonical)) m )
+  => Declaration a Canonical -> m ()
+checkDeclaration a = if has _Signature a
+  then checkSignature (view lhs a) (view rhs a)
+  else checkDefinition (view lhs a) (view rhs a) where
     checkSignature l r = get >>= \s -> do
       -- Find the representation of signature.
       r' <- represent r
