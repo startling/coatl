@@ -133,7 +133,10 @@ standard = Environment types defs where
     [ (Type, type_)
     , (Function, function id type_ $ function id type_ type_)
     , (Dependent, dependent type_ . Lambda
-      $ function _Just (Construct Nothing) (Construct $ Just Type))
+      $ function _Just
+          (function _Just
+            (Construct Nothing) (Construct $ Just Type))
+          (Construct $ Just Type))
     ]
   defs = M.fromList
     [ (Type, Construct Type)
