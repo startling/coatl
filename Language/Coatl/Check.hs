@@ -69,6 +69,8 @@ import Language.Coatl.Syntax
 import Language.Coatl.Abstract
 import Language.Coatl.Evaluate
 import Language.Coatl.Check.Types
+--
+import Debug.Trace
 
 -- | Run a number of 'EitherT e m b' with the same error state,
 --   'mappend' the errors together, and throw the result.
@@ -112,10 +114,22 @@ asGraph = connections (has _Signature &&& view lhs) deps where
 -- | Check a list of declarations and read them into the environment.
 declarations ::
   ( MonadError [String] m
-  , MonadState (Environment a Canonical) m)
+  , MonadState (Environment a Canonical) m )
   => [Declaration a Canonical] -> m ()
 declarations = mapM_ (collect checkDeclaration) <=<
   either (throwError . pure . show) return . sort . asGraph
+
+names ::
+  ( Ord v, Show v
+  , Foldable t
+  , MonadState (Environment a v) m
+  , MonadError [String] m )
+  => t v -> m ()
+names = collect $ \n -> get >>= \s -> do
+  unless (M.member n (view types s)) $
+    throwError [show n ++ " has no signature."]
+  unless (M.member n (view definitions s)) $
+    throwError [show n ++ " has no definition."]
 
 -- | Check a declaration and read it into the environment, assuming
 --   that, if it is a 'Definition', its type signature is present
@@ -125,6 +139,12 @@ checkDeclaration ::
   , MonadState (Environment a Canonical) m )
   => Declaration a Canonical -> m ()
 checkDeclaration (Signature _ l r) = get >>= \s -> do
+  -- Error if a type signature of this already exists.
+  when (M.member l $ view types s) $ throwError
+    [ "Multiple signatures for " ++ show l ]
+  -- Error if any of the names in the declarations do
+  -- not yet exist.
+  names r
   -- Find the representation of signature.
   r' <- represent r
   -- Check that the signature has type 'Type'.
@@ -134,6 +154,12 @@ checkDeclaration (Signature _ l r) = get >>= \s -> do
   -- Set the signature at this lhs to the value.
   (types . at l) .= Just v
 checkDeclaration (Definition _ l r) = get >>= \s -> do
+  -- Error if a definition of this already exists.
+  when (M.member l $ view definitions s) $ throwError
+    [ "Multiple definitions for " ++ show l ]
+  -- Error if any of the names in the declarations do
+  -- not yet exist.
+  names r
   -- Find the representation of the definition.
   r' <- represent r
   -- Find the type signature corresponding to this
