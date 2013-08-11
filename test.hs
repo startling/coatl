@@ -234,8 +234,8 @@ checks = do
             , "bottom = bottom;"
             ]
         fails $ declarations bottom
-      it "should not error for `the`'s or `example`'s types or definitions" $ do
-        succeeds . declarations $ the ++ example
+      it "should not error for `the`'s types or definitions" $ do
+        succeeds . declarations $ the
       it "doesn't error for 'x = const O x'" $ do
         pendingWith "is this kind of thing worth the effort?"
         succeeds . declarations $ declare
