@@ -164,15 +164,3 @@ checkDeclaration (Definition _ l r) = get >>= \s -> do
   v <- runReaderT (evaluate r') (view definitions s)
   -- Set the value.
   (definitions . at l) .= Just v
-
--- | Conservatively check for partiality: if a declaration references
---   anything that references itself, throw an error.
---
---   This should probably be improved eventually.
-checkTotality :: (Ord a, Show a, Foldable t, MonadError [String] m)
-  => [(a, t a)] -> a -> m ()
-checkTotality cs c = let
-  graph = map (fmap toList) cs
-  in if path (associations graph) c c
-    then throwError [show c ++ " references itself."]
-    else return ()
