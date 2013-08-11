@@ -28,7 +28,7 @@ import Text.Parser.Expression
 -- trifecta
 import Text.Trifecta
 -- coatl
-import Language.Coatl.Parse.Syntax
+import Language.Coatl.Syntax
 import Language.Coatl.Parse.Common
 
 -- | Parse any expression with a given `l` and `f`.

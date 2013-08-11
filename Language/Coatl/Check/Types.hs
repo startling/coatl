@@ -13,7 +13,7 @@ import Control.Monad.Reader
 import Control.Lens
 -- coatl
 import Language.Coatl.Abstract
-import Language.Coatl.Parse.Syntax
+import Language.Coatl.Syntax
 import Language.Coatl.Evaluate
 import Language.Coatl.Check.Environment
 

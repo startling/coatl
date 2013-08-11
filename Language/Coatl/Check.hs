@@ -65,7 +65,7 @@ import Control.Lens
 import Text.Trifecta
 -- coatl
 import Language.Coatl.Graph
-import Language.Coatl.Parse.Syntax
+import Language.Coatl.Syntax
 import Language.Coatl.Abstract
 import Language.Coatl.Evaluate
 import Language.Coatl.Check.Environment

@@ -1,5 +1,4 @@
 module Language.Coatl.Check.Environment where
-import Control.Monad.Error
 -- containers
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -8,7 +7,7 @@ import Control.Monad.Reader
 -- lens
 import Control.Lens
 -- coatl
-import Language.Coatl.Parse.Syntax
+import Language.Coatl.Syntax
 import Language.Coatl.Abstract
 import Language.Coatl.Evaluate
 

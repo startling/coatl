@@ -20,7 +20,7 @@ import Data.Bifunctor
 -- lens
 import Control.Lens
 -- coatl
-import Language.Coatl.Parse.Syntax
+import Language.Coatl.Syntax
 
 data Infer a v
   = IReference a v

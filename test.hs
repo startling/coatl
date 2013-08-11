@@ -28,8 +28,9 @@ import Test.Hspec
 import Control.Lens
 -- coatl
 import Language.Coatl.Graph
-import Language.Coatl.Parse
+import Language.Coatl.Syntax
 import Language.Coatl.Abstract
+import Language.Coatl.Parse
 import Language.Coatl.Check
 import Language.Coatl.Check.Types
 import Language.Coatl.Check.Environment

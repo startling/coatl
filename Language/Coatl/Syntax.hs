@@ -2,7 +2,7 @@
 {-# Language DeriveFoldable #-}
 {-# Language DeriveTraversable #-}
 {-# Language TemplateHaskell #-}
-module Language.Coatl.Parse.Syntax where
+module Language.Coatl.Syntax where
 -- base
 import Control.Applicative
 import Data.Foldable (Foldable(..))
