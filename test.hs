@@ -185,7 +185,7 @@ checks = do
   describe "Language.Coatl.Check" $ do
     let
       ?read = M.empty
-      ?state = Environment M.empty M.empty
+      ?state = standard
     let
       the = declare
         [ "the : Type ~ { a => a -> a};"
@@ -241,6 +241,19 @@ checks = do
         succeeds . declarations $ declare
           [ "x : Nat;"
           , "x = const O x;"
+          ]
+      it "errors for uninferrable definitions without signatures" $ do
+        fails . declarations $ declare
+          [ "xyz _ = the;" ]
+      it "errors for definitions referencing nonexistant names" $ do
+        fails . declarations $ declare
+          [ "fish : Type;"
+          , "fish = bird;"
+          ]
+      it "errors for signatures referencing nonexistant names" $ do
+        fails . declarations $ declare
+          [ "fish : bird;"
+          , "fish = Type;"
           ]
   describe "Language.Coatl.Check.Types" $ do
     describe "check" $ do
