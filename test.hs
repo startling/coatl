@@ -186,7 +186,7 @@ checks = do
   describe "Language.Coatl.Check" $ do
     let
       ?read = M.empty
-      ?state = (M.empty, M.empty)
+      ?state = Environment M.empty M.empty
     let
       the = declare
         [ "the : Type ~ { a => a -> a};"
@@ -200,12 +200,12 @@ checks = do
       it "errors for `the` without standard environment" $ do
         fails . checkNames $ the
       it "does not error for `the` with standard environment" $ do
-        let ?read = fst standard
+        let ?read = view definitions standard
         succeeds . checkNames $ the
       it "errors for `example` without assumptions" $ do
         fails . checkNames $ example
       it "errors for `example` even with standard assumptions" $ do
-        let ?read = fst standard
+        let ?read = view definitions standard
         fails . checkNames $ example
     describe "asGraph" $ do
       let
@@ -255,7 +255,7 @@ checks = do
     parse = parseString expression mempty
     checksAs v s = let
       ?state = ()
-      ?read = Checking id $ uncurry Environment standard
+      ?read = Checking id standard
       in succeeds $ do
         (v', s') <- liftM (over both (first (const ()) . fmap canonicalize))
           . maybe (throwError ["Parse error in example."]) return

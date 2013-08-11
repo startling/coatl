@@ -113,9 +113,7 @@ asGraph = connections (has _Signature &&& view lhs) deps where
 -- | Check a list of declarations and read them into the environment.
 declarations ::
   ( MonadError [String] m
-  , MonadState
-    ( Map Canonical (Value Canonical)
-    , Map Canonical (Value Canonical)) m )
+  , MonadState (Environment a Canonical) m)
   => [Declaration a Canonical] -> m ()
 declarations = mapM_ (collect checkDeclaration) <=<
   either (throwError . (: []) . show) return . sort . asGraph where
@@ -125,9 +123,7 @@ declarations = mapM_ (collect checkDeclaration) <=<
 --   in the first part of the environment.
 checkDeclaration ::
   ( MonadError [String] m
-  , MonadState
-    ( Map Canonical (Value Canonical)
-    , Map Canonical (Value Canonical)) m )
+  , MonadState (Environment a Canonical) m )
   => Declaration a Canonical -> m ()
 checkDeclaration a = if has _Signature a
   then checkSignature (view lhs a) (view rhs a)
@@ -136,26 +132,25 @@ checkDeclaration a = if has _Signature a
       -- Find the representation of signature.
       r' <- represent r
       -- Check that the signature has type 'Type'.
-      runReaderT (check r' $ Construct Type)
-        (Checking id $ uncurry Environment s)
+      runReaderT (check r' $ Construct Type) (Checking id s)
       -- Evaluate the signature.
-      v <- runReaderT (evaluate r') (snd s)
+      v <- runReaderT (evaluate r') (view definitions s)
       -- Set the signature at this lhs to the value.
-      (_1 . at l) .= Just v
+      (types . at l) .= Just v
     checkDefinition l r = get >>= \s -> do
       -- Find the representation of the definition.
       r' <- represent r
       -- Find the type signature corresponding to this
       -- definition.
-      ts <- use (_2 . at l) >>= flip maybe return
+      ts <- use (definitions . at l) >>= flip maybe return
         (throwError ["Something's wrong."])
       -- Check that the value of the definition checks
       -- as that type.
-      runReaderT (check r' ts) (Checking id $ uncurry Environment s)
+      runReaderT (check r' ts) (Checking id s)
       -- Evaluate the type.
-      v <- runReaderT (evaluate r') (snd s)
+      v <- runReaderT (evaluate r') (view definitions s)
       -- Set the value.
-      (_2 . at l) .= Just v
+      (definitions . at l) .= Just v
 
 -- | Conservatively check for partiality: if a declaration references
 --   anything that references itself, throw an error.

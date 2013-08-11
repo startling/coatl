@@ -104,6 +104,15 @@ binary nd = prism create decompose where
         Just c -> Right (c, a, b)
     elsewise -> Left elsewise
 
+data Environment a v = Environment
+  { _types       :: Map v (Value v)
+    -- ^ The types of things that have already been checked
+    --   in the environment. They should be in normal form.
+  , _definitions :: Map v (Value v)
+    -- ^ The values already defined.
+  }
+makeLenses ''Environment
+
 -- | The types and definitions in the standard environment.
 --   We have the following types:
 --
@@ -115,10 +124,8 @@ binary nd = prism create decompose where
 --
 --   The definitions just map 'Type', 'Dependent', and 'Function'
 --   to corresponding constructors.
-standard ::
-  ( Map Canonical (Value Canonical)
-  , Map Canonical (Value Canonical) )
-standard = (types, defs) where
+standard :: Environment a Canonical
+standard = Environment types defs where
   type_ = Construct Type
   function f a b = (Function, a, b) ^. (re $ binary f)
   dependent a b = (Dependent, a, b) ^. (re $ binary id)

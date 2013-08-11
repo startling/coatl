@@ -11,15 +11,6 @@ import Language.Coatl.Syntax
 import Language.Coatl.Abstract
 import Language.Coatl.Evaluate
 
-data Environment a v = Environment
-  { _types       :: Map v (Value v)
-    -- ^ The types of things that have already been checked
-    --   in the environment. They should be in normal form.
-  , _definitions :: Map v (Value v)
-    -- ^ The values already defined.
-  }
-makeLenses ''Environment
-
 data Checking a v = Checking
   { _named       :: APrism' v Canonical
     -- ^ A prism into the 'Canonical' in the symbol type.
