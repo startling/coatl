@@ -81,17 +81,6 @@ collect f = mapM (runEitherT . f) . toList
     if null ls then return ()
       else throwError (mconcat ls)
 
--- | Check that all the references in an expression exist either
---   in the environment or in a given list.
-checkNames ::
-  ( Ord v, Show v, MonadError [String] m
-  , MonadReader (Map v a) m )
-  => [Declaration k v] -> m ()
-checkNames ds = ask >>= \env ->
-  forM_ ds $ mapMOf_ (rhs . traverse)
-    $ \r -> unless (r `M.member` env || any ((r ==) . view lhs) ds)
-      $ throwError ["Unknown name: " ++ show r]
-
 -- | Create a graph from a list of declarations, with the provision
 --   that each value declaration depends on the corresponding type
 --   signature.

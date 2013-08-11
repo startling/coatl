@@ -191,21 +191,6 @@ checks = do
         [ "the : Type ~ { a => a -> a};"
         , "the _ a = a;"
         ]
-      example = declare
-        [ "example : the Type Nat;"
-        , "example = the Nat O;"
-        ]
-    describe "checkNames" $ do
-      it "errors for `the` without standard environment" $ do
-        fails . checkNames $ the
-      it "does not error for `the` with standard environment" $ do
-        let ?read = view definitions standard
-        succeeds . checkNames $ the
-      it "errors for `example` without assumptions" $ do
-        fails . checkNames $ example
-      it "errors for `example` even with standard assumptions" $ do
-        let ?read = view definitions standard
-        fails . checkNames $ example
     describe "asGraph" $ do
       let
         g = asGraph $ declare
@@ -234,6 +219,9 @@ checks = do
             , "bottom = bottom;"
             ]
         fails $ declarations bottom
+      it "errors for 'the' without the standard environment" $ do
+        let ?state = Environment M.empty M.empty
+        fails . declarations $ the
       it "should not error for `the`'s types or definitions" $ do
         succeeds . declarations $ the
       it "doesn't error for 'x = const O x'" $ do
