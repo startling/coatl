@@ -16,18 +16,7 @@ import qualified Data.Map as M
 -- lens
 import Control.Lens
 -- coatl
-import Language.Coatl.Check.Abstract
-
-data Value n
-  = Lambda (Value (Maybe n))
-  | Applied (Value n) (Value n)
-  | Construct n
-  deriving
-  ( Eq
-  , Ord
-  , Show
-  , Functor
-  )
+import Language.Coatl.Abstract
 
 evaluate ::
   ( Ord v, Show v
@@ -61,3 +50,4 @@ reduce (Applied a b) = let b' = reduce b in
   case reduce a of
     Lambda e -> substitute b' e
     elsewise -> Applied elsewise b'
+

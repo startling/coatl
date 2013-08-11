@@ -27,11 +27,11 @@ import Test.Hspec
 -- lens
 import Control.Lens
 -- coatl
-import Language.Coatl.Parse
 import Language.Coatl.Graph
+import Language.Coatl.Parse
+import Language.Coatl.Abstract
 import Language.Coatl.Check
 import Language.Coatl.Check.Types
-import Language.Coatl.Check.Abstract
 import Language.Coatl.Check.Environment
 import Language.Coatl.Evaluate
 
@@ -59,7 +59,7 @@ declare = map (fmap canonicalize)
   . unlines
 
 parsing :: Spec
-parsing= do
+parsing = do
   describe "Language.Coatl.Parse.Expression" $ do
     describe "expression" $ do
       it "parses names" $ do
@@ -196,14 +196,16 @@ checks = do
         , "example = the Nat O;"
         ]
     describe "checkNames" $ do
-      it "errors for `the` without standard assumptions" $ do
+      it "errors for `the` without standard environment" $ do
         fails . checkNames $ the
-      it "does not error for `the` with standard assumptions" $ do
-        succeeds . assuming standard . checkNames $ the
+      it "does not error for `the` with standard environment" $ do
+        let ?read = fst standard
+        succeeds . checkNames $ the
       it "errors for `example` without assumptions" $ do
         fails . checkNames $ example
       it "errors for `example` even with standard assumptions" $ do
-        fails . assuming standard . checkNames $ example
+        let ?read = fst standard
+        fails . checkNames $ example
     describe "asGraph" $ do
       let
         g = asGraph $ declare

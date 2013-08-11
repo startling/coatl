@@ -12,9 +12,9 @@ import Control.Monad.Reader
 -- lens
 import Control.Lens
 -- coatl
+import Language.Coatl.Abstract
 import Language.Coatl.Parse.Syntax
 import Language.Coatl.Evaluate
-import Language.Coatl.Check.Abstract
 import Language.Coatl.Check.Environment
 
 -- | Infer the type of an 'Infer' term.

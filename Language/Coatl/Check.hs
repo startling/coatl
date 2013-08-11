@@ -66,41 +66,10 @@ import Text.Trifecta
 -- coatl
 import Language.Coatl.Graph
 import Language.Coatl.Parse.Syntax
+import Language.Coatl.Abstract
 import Language.Coatl.Evaluate
-import Language.Coatl.Check.Abstract
 import Language.Coatl.Check.Environment
 import Language.Coatl.Check.Types
-
--- | Run an environment-dependent action with an addition to the environment.
-assuming :: (Ord k, MonadReader (Map k v) m) => [(k, v)] -> m a -> m a
-assuming as = local $ \e -> e <> M.fromList as
-
--- | The standard environment. We have the following types:
---
---  @
---    Type : Type
---    (->) : Type -> Type -> Type
---    (~)  : Type ~ { a => (a -> Type) -> Type }
---  @
-standard :: [(Canonical, Syntax (Maybe a) Canonical)]
-standard =
-  [ (Type, type_)
-  , (Function, binary function type_ type_)
-  , (Dependent, binary dependent type_
-      . SLambda Nothing
-        . binary (Just <$> function)
-          (binary (Just <$> function)
-            (SReference Nothing Nothing) (Just <$> type_))
-             $ Just <$> type_ )
-  ]
-  where
-    binary a b c = SApplication (SApplication a b) c
-    type_ :: Syntax (Maybe a) Canonical
-    type_ = SReference Nothing Type
-    function :: Syntax (Maybe a) Canonical
-    function = SReference Nothing Function
-    dependent :: Syntax (Maybe a) Canonical
-    dependent = SReference (Nothing) Dependent
 
 -- | Run a number of 'EitherT e m b' with the same error state,
 --   'mappend' the errors together, and throw the result.
