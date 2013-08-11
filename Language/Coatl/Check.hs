@@ -52,9 +52,7 @@ import Data.Map (Map)
 import qualified Data.Map as M
 -- transformers
 import Control.Monad.Error
-import Control.Monad.Identity
 -- mtl
-import Control.Monad.Trans
 import Control.Monad.Reader
 import Control.Monad.State
 -- either
@@ -69,8 +67,6 @@ import Language.Coatl.Syntax
 import Language.Coatl.Abstract
 import Language.Coatl.Evaluate
 import Language.Coatl.Check.Types
---
-import Debug.Trace
 
 -- | Run a number of 'EitherT e m b' with the same error state,
 --   'mappend' the errors together, and throw the result.
