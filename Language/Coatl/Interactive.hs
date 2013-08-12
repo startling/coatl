@@ -41,7 +41,7 @@ data Command
   )
 
 command :: DeltaParsing f => f (Maybe Command)
-command = Just <$> cs <|> Nothing <$ spaces where
+command = Just <$> cs <|> Nothing <$ (spaces *> eof) where
   cs = 
           TypeC <$> (symbol ":t" *> expression)
       <|> EvalC <$> expression
