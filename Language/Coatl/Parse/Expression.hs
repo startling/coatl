@@ -35,14 +35,15 @@ import Language.Coatl.Parse.Common
 inner :: DeltaParsing f
   => (Syntax Span Identifier -> Syntax Span v)
   -> f v -> f (Syntax Span v)
-inner l f = buildExpressionParser table (applied l f) where
-  application l s sp a b = SApplication
-    (SApplication (l $ SReference sp (Operator s)) a) b
-  binary s a = Infix (application l s <$> spanning (symbol s)) a
-  table =
-    [ [ binary "->" AssocRight ]
-    , [ binary "~" AssocLeft ]
-    ]
+inner l f = buildExpressionParser table (applied l f) <?> "expression"
+  where
+    application l s sp a b = SApplication
+      (SApplication (l $ SReference sp (Operator s)) a) b
+    binary s a = Infix (application l s <$> spanning (symbol s)) a
+    table =
+      [ [ binary "->" AssocRight ]
+      , [ binary "~" AssocLeft ]
+      ]
 
 -- | Parse any non-zero-length sequence of simple values,
 --   treating them as applications.
