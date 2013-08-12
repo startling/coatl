@@ -59,8 +59,10 @@ import Control.Monad.State
 import Control.Monad.Trans.Either
 -- lens
 import Control.Lens
+-- ansi-wl-pprint
+import Text.PrettyPrint.ANSI.Leijen (Doc, text)
 -- trifecta
-import Text.Trifecta
+import Text.Trifecta hiding (text)
 -- coatl
 import Language.Coatl.Graph
 import Language.Coatl.Syntax
@@ -98,11 +100,11 @@ asGraph = connections (has _Signature &&& view lhs) deps where
 
 -- | Check a list of declarations and read them into the environment.
 declarations ::
-  ( MonadError [String] m
+  ( MonadError Doc m
   , MonadState (Environment a Canonical) m )
   => [Declaration a Canonical] -> m ()
 declarations = mapM_ (collect checkDeclaration) <=<
-  either (throwError . pure . show) return . sort . asGraph
+  either (throwError . text . show) return . sort . asGraph
 
 -- | Check that every name in some 'foldable' has a definition
 --   and a type signature in the environment.
@@ -110,25 +112,25 @@ names ::
   ( Ord v, Show v
   , Foldable t
   , MonadState (Environment a v) m
-  , MonadError [String] m )
+  , MonadError Doc m )
   => t v -> m ()
 names = collect $ \n -> get >>= \s -> do
-  unless (M.member n (view types s)) $
-    throwError [show n ++ " has no signature."]
+  unless (M.member n (view types s)) .
+    throwError . text $ show n ++ " has no signature."
   unless (M.member n (view definitions s)) $
-    throwError [show n ++ " has no definition."]
+    throwError . text $ show n ++ " has no definition."
 
 -- | Check a declaration and read it into the environment, assuming
 --   that, if it is a 'Definition', its type signature is present
 --   in the first part of the environment.
 checkDeclaration ::
-  ( MonadError [String] m
+  ( MonadError Doc m
   , MonadState (Environment a Canonical) m )
   => Declaration a Canonical -> m ()
 checkDeclaration (Signature _ l r) = get >>= \s -> do
   -- Error if a type signature of this already exists.
-  when (M.member l $ view types s) $ throwError
-    [ "Multiple signatures for " ++ show l ]
+  when (M.member l $ view types s) . throwError . text
+    $ "Multiple signatures for " ++ show l
   -- Error if any of the names in the declarations do
   -- not yet exist.
   names r
@@ -142,8 +144,8 @@ checkDeclaration (Signature _ l r) = get >>= \s -> do
   (types . at l) .= Just v
 checkDeclaration (Definition _ l r) = get >>= \s -> do
   -- Error if a definition of this already exists.
-  when (M.member l $ view definitions s) $ throwError
-    [ "Multiple definitions for " ++ show l ]
+  when (M.member l $ view definitions s) . throwError . text
+    $ "Multiple definitions for " ++ show l
   -- Error if any of the names in the declarations do
   -- not yet exist.
   names r
@@ -152,7 +154,7 @@ checkDeclaration (Definition _ l r) = get >>= \s -> do
   -- Find the type signature corresponding to this
   -- definition.
   ts <- use (types . at l) >>= flip maybe return
-    (throwError ["Something's wrong: " ++ show l])
+    (throwError . text $ "Something's wrong: " ++ show l)
   -- Check that the value of the definition checks
   -- as that type.
   runReaderT (check r' ts) (Checking id s)

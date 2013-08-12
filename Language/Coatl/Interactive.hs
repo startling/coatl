@@ -12,7 +12,9 @@ import Control.Monad.Trans
 import Control.Monad.State.Strict
 import Control.Monad.Reader
 -- trifecta
-import Text.Trifecta
+import Text.Trifecta hiding (text)
+-- ansi-wl-pprint
+import Text.PrettyPrint.ANSI.Leijen (Doc, text)
 -- lens
 import Control.Lens
 -- haskeline
@@ -66,9 +68,9 @@ showType ::
 showType s = either (liftIO . print) return <=< runEitherT $
   represent (fmap canonicalize s)
     >>= \r -> case preview _CInfer r of
-      Nothing -> throwError ["Uninferrable type."]
+      Nothing -> throwError . text $ "Uninferrable type."
       Just ty -> lift get >>= runReaderT (infer ty) . Checking id
-        >>= liftIO . putStrLn . pretty
+        >>= liftIO . putStrLn . prettily
 
 showEval ::
   ( MonadIO m
@@ -77,11 +79,11 @@ showEval ::
 showEval s = either (liftIO . print) return <=< runEitherT $
   represent (fmap canonicalize s)
     >>= \r -> case preview _CInfer r of
-      Nothing -> throwError ["Uninferrable type."]
+      Nothing -> throwError . text $ "Uninferrable type."
       Just ty -> lift get >>= runReaderT (infer ty) . Checking id
         >> lift get >>= runReaderT (evaluate r) . view definitions
-          >>= liftIO . putStrLn . pretty
+          >>= liftIO . putStrLn . prettily
 
 -- TODO: make this prettier
-pretty :: Value Canonical -> String
-pretty = show
+prettily :: Value Canonical -> String
+prettily = show

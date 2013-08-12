@@ -21,7 +21,9 @@ import Control.Monad.Trans.Either
 -- bifunctors
 import Data.Bifunctor
 -- trifecta
-import Text.Trifecta
+import Text.Trifecta hiding (text)
+-- ansi-wl-pprint
+import Text.PrettyPrint.ANSI.Leijen (text, Doc)
 -- hspec
 import Test.Hspec
 -- lens
@@ -269,7 +271,7 @@ checks = do
       in succeeds $ do
         -- Parse both expressions
         (v', s') <- liftM (over both (first (const ()) . fmap canonicalize))
-          . maybe (throwError ["Parse error in example."]) return
+          . maybe (throwError . text $ "Parse error in example.") return
           . preview _Success $ (,) <$> parse v <*> parse s
         -- Fully evaluate the type we're checking as.
         s'' <- represent s' >>= \rs ->
@@ -323,13 +325,13 @@ evaluation = do
       => String -> Value v -> Expectation
     evaluatesTo s v = let ?state = () in succeeds
       $ case parseString expression mempty s of
-        Failure f -> throwError
-          [printf "Parse failure on \"%s\"" (show s)]
+        Failure f -> throwError . text
+          $ printf "Parse failure on \"%s\"" (show s)
         Success c -> do
-          r <- represent (fmap canonicalize c)
+          r <- represent $ fmap canonicalize c
           e <- evaluate r
-          unless (e == v) $ throwError
-              [printf "%s /= %s" (show e) (show v)]
+          unless (e == v) . throwError . text $
+            printf "%s /= %s" (show e) (show v)
 
 main :: IO ()
 main = hspec . sequence_ $
