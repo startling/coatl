@@ -14,7 +14,7 @@ import Control.Monad.Reader
 -- trifecta
 import Text.Trifecta hiding (text)
 -- ansi-wl-pprint
-import Text.PrettyPrint.ANSI.Leijen (Doc, text)
+import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 -- lens
 import Control.Lens
 -- haskeline
@@ -50,7 +50,7 @@ command = Just <$> cs <|> Nothing <$ spaces where
 interactive :: MonadException m => m (Environment Span Canonical)
 interactive = flip execStateT standard . runInputT settings
   . (() <$) . iterateWhile id $ do
-    line <- getInputLine "> "
+    line <- getInputLine . show . dullcyan . text $ "> "
     case parseString command mempty <$> line of
       Nothing -> return True
       Just (Failure f) -> True <$ liftIO (print f)
