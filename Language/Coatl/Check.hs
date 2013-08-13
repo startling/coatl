@@ -1,44 +1,5 @@
 {-# Language FlexibleContexts #-}
 {-# Language GeneralizedNewtypeDeriving #-}
--- Say we have the following two declarations:
---
--- @
---  the : Type ~ { a => a -> a }
---  the _ a = a
---
---  example : the Type Nat
---  example = the Nat O
--- @
---
--- Looking only at the the declarations, we observe that `example`'s
--- type depends on `the`'s type. So we have the following dependency
--- graph: "[`the`] <= [`const`]`.
---
--- Following this graph, we first type-check `the`'s type declaration;
--- in other words, we check that the type of the type declaration is
--- Type. Since its uses of Type, (~), and (->) are all legal, it passes.
---
--- Then we evaluate it to a normal form where references are considered
--- normal. This just gives us @Type ~ {a => a -> a}@.
---
--- Next, we type-check `example`'s type declaration; since `the` takes
--- two arguments (a type and a value of that type) we're fine.
---
--- Then we evaluate it to the reference-normal form as above. This is,
--- uninterestingly, "the Type Nat".
---
--- Then we look at the RHS of each declaration and check which types
--- each depends on; again, `the` depends on nothing but `example` depends
--- on `the`, so our graph looks like "[`the`] <= [`const`]".
---
--- Then we follow the references in `the`'s type and evaluate it to
--- normal form. This is trivial. Finally we check whether `the`'s RHS
--- agrees with its type declaration. Since lambdas may be of the function
--- type or of the dependent-function type, it does.
---
--- Now we follow the references in `example`'s type and evaluate it to
--- normal form. This gives us just `Nat`. because of `the`'s type, we know
--- the type of the RHS of `example` is just `Nat`, so that succeeds, also.
 module Language.Coatl.Check where
 -- base
 import Control.Applicative
