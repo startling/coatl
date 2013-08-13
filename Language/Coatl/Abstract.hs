@@ -14,9 +14,6 @@ import Control.Monad.Error
 -- containers
 import Data.Map (Map)
 import qualified Data.Map as M
--- mtl
-import Control.Monad.Writer
-import Control.Monad.State
 -- bifunctors
 import Data.Bitraversable
 import Data.Bifoldable
@@ -75,6 +72,13 @@ data Term a n
   , Foldable
   , Traversable
   )
+
+instance Monad (Term ()) where
+  return = Reference ()
+  Reference _ a >>= f = f a
+  Applied a b >>= f = Applied (a >>= f) (b >>= f)
+  Lambda _ e >>= f = Lambda () $ e >>= maybe
+    (return Nothing) (fmap Just . f)
 
 instance Bitraversable Term where
   bitraverse f g (Reference a n) = Reference <$> f a <*> g n
