@@ -1,5 +1,6 @@
 {-# Language FlexibleContexts #-}
 {-# Language DeriveFunctor #-}
+-- | Evaluate coatl terms to normal form.
 module Language.Coatl.Evaluate where
 -- base
 import Control.Applicative
@@ -20,6 +21,8 @@ import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 -- coatl
 import Language.Coatl.Abstract
 
+-- | Evaluate some checkable term to normal form, given
+--   a 'Map' of the (normal) values of things it might reference.
 evaluate ::
   ( Ord v, Pretty v
   , MonadError Doc m )
@@ -36,6 +39,8 @@ evaluate (CInfer (IApplication f a)) = evaluate (CInfer f)
     Reference () c -> return $ Applied (Reference () c) a'
     Applied a b -> return $ Applied (Applied a b) a'
 
+-- | Substitute a parameter into a lambda body and evaluate the
+--   result to normal form.
 substitute :: Term () n -> Term () (Maybe n) -> Term () n
 substitute a = flip runReader (maybe a $ Reference ()) . sub where
   sub :: Term () a -> Reader (a -> Term () n) (Term () n)
@@ -44,6 +49,7 @@ substitute a = flip runReader (maybe a $ Reference ()) . sub where
   sub (Lambda () e) = Lambda () `liftM` withReader
     (maybe (Reference () Nothing) . (fmap Just .)) (sub e)
 
+-- | Evaluate some term to normal form.
 reduce :: Term () n -> Term () n
 reduce (Reference () n) = Reference () n
 reduce (Lambda () e) = Lambda () e
