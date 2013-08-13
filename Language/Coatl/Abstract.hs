@@ -78,6 +78,10 @@ data Term a n
   , Traversable
   )
 
+instance Applicative (Term ()) where
+  pure = return
+  (<*>) = ap
+
 instance Monad (Term ()) where
   return = Reference ()
   Reference _ a >>= f = f a
