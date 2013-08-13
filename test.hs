@@ -37,7 +37,7 @@ import Language.Coatl.Check.Types
 import Language.Coatl.Evaluate
 
 shouldParse :: Show a => Parser a -> String -> Expectation
-shouldParse p s = parseString p mempty s
+shouldParse p s = parseString (p <* eof) mempty s
   `shouldSatisfy` has _Success
 
 run :: (?state :: s, ?read :: r)
