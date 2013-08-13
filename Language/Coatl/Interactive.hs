@@ -33,6 +33,7 @@ import Language.Coatl.Evaluate
 data Command
   = TypeC (Term Span Identifier)
   | EvalC (Term Span Identifier)
+  | LoadC FilePath
   | QuitC
   deriving
   ( Eq
@@ -44,6 +45,7 @@ command = Just <$> cs <|> Nothing <$ spaces where
   cs = 
           TypeC <$> (symbol ":t" *> expression)
       <|> EvalC <$> expression
+      <|> LoadC <$> (symbol ":l" *> some anyChar)
       <|> QuitC <$  symbol ":q"
 
 interactive :: MonadException m => m (Environment Span Canonical)
@@ -57,11 +59,21 @@ interactive = flip execStateT standard . runInputT settings
       Just (Success (Just QuitC)) -> return False
       Just (Success (Just (TypeC s))) -> True <$ lift (showType s)
       Just (Success (Just (EvalC s))) -> True <$ lift (showEval s)
+      Just (Success (Just (LoadC f))) -> True <$ lift (loadFile f)
   where
     settings = defaultSettings
 
 handling :: MonadIO m => EitherT Doc m () -> m ()
 handling = either (liftIO . print . indent 2) return <=< runEitherT
+
+loadFile ::
+  ( MonadIO m
+  , MonadState (Environment Span Canonical) m )
+  => FilePath -> m ()
+loadFile f = handling $ parseFromFileEx (many declaration) f
+  >>= \ds -> case ds of
+    Failure d -> throwError . indent 2 $ d
+    Success s -> declarations . map (fmap canonicalize) $ s
 
 showType ::
   ( MonadIO m
