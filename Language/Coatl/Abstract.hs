@@ -4,6 +4,29 @@
 {-# Language FlexibleContexts #-}
 {-# Language FlexibleInstances #-}
 {-# Language Rank2Types #-}
+-- | This  module has in it the abstract representations of
+--   coatl programs and program environments (and some
+--    more-syntax-level representations) as well as typeclass
+--   instances and a number of small functions on them.
+--
+--   The very first thing we obtain, after parsing the source,
+--   is a @'Term Span Identifier'@. These namess are then
+--   resolved (currently with 'canonicalize', but probably
+--   something more powerful in the future) into 'Canonical'.
+--
+--   For type-checking and inference we convert the @'Term'a v@s into 
+--   one of two types: either a @'Check' a v@ or @'Infer' a v@. These
+--   correspond (naturally) to the checkable and inferable terms
+--   in coatl. Notice that every inferable term is also
+--   checkable (and we can create a @'Check' a v@ from it with
+--   'CInfer') but that then we need to supply a type in order to
+--   check for well-formedness.
+--
+--   Finally, after type-checking, we evaluate any checkable term
+--   back into a @'Term' a v@ that is supposed to be in normal
+--   form -- that is, application of functions is carried out and 
+--   the 'Reference' constructor is taken to represent
+--   constructor names.
 module Language.Coatl.Abstract where
 -- base
 import Control.Applicative
@@ -195,7 +218,7 @@ data Check a v
   )
 makePrisms ''Check
 
--- | Represent some 'Syntax' as a 'Check'.
+-- | Represent some @'Syntax' a v@ as a @'Check' a v@..
 represent :: MonadError Doc m => Term a v -> m (Check a v)
 represent (Reference a v) = return . CInfer $ IReference a v
 represent (Lambda a e) = CLambda a `liftM` represent e
@@ -211,6 +234,10 @@ canonicalize (Operator "~") = Dependent
 canonicalize (Name "Type") = Type
 canonicalize o = Simple o
 
+-- | When we type-check and evaluate terms, we want some
+--   information about things that have already been checked.
+--   An @'Environment' a v@ stores that information about terms
+--   annotated with type @a@ and with names of type @v@.
 data Environment a v = Environment
   { _types       :: Map v (Term () v)
     -- ^ The types of things that have already been checked
