@@ -35,7 +35,7 @@ makeLenses ''Checking
 -- | Run a checking action in an environment with something new
 --   as 'Nothing'.
 with :: Ord v
-  => Value v
+  => Term v
   -> ReaderT (Checking a (Maybe v)) m b
   -> ReaderT (Checking a v) m b
 with a = withReaderT (set (environment . types . at Nothing)
@@ -50,7 +50,7 @@ with a = withReaderT (set (environment . types . at Nothing)
 infer ::
   ( Ord v, Show v
   , MonadError Doc m )
-  => Infer b v -> ReaderT (Checking a v) m (Value v)
+  => Infer b v -> ReaderT (Checking a v) m (Term v)
 infer (IReference _ v) = view (environment . types . at v)
   >>= maybe report return where
     report :: MonadError Doc m => m a
@@ -70,7 +70,7 @@ infer (IApplication f ar) = view named >>= \nd ->
 check ::
   ( Ord v, Show v
   , MonadError Doc m )
-  => Check a v -> Value v -> ReaderT (Checking b v) m ()
+  => Check a v -> Term v -> ReaderT (Checking b v) m ()
 check (CLambda _ l) t = view named
   >>= \nd -> case preview (binary nd) t of
     -- If we're checking this lambda form as a function,

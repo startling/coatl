@@ -321,8 +321,8 @@ evaluation = do
   where
     evaluatesTo ::
       ( Show v, Ord v
-      , ?read :: Map Canonical (Value v) )
-      => String -> Value v -> Expectation
+      , ?read :: Map Canonical (Term v) )
+      => String -> Term v -> Expectation
     evaluatesTo s v = let ?state = () in succeeds
       $ case parseString expression mempty s of
         Failure f -> throwError . text

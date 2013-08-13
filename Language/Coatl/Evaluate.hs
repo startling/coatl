@@ -23,7 +23,7 @@ import Language.Coatl.Abstract
 evaluate ::
   ( Ord v, Show v
   , MonadError Doc m )
-  => Check a v -> ReaderT (Map v (Value n)) m (Value n)
+  => Check a v -> ReaderT (Map v (Term n)) m (Term n)
 evaluate (CLambda _ n) = Lambda `liftM` withReaderT
   (set (at Nothing) (Just $ Construct Nothing)
   . M.mapKeys Just . fmap (fmap Just)) (evaluate n)
@@ -36,15 +36,15 @@ evaluate (CInfer (IApplication f a)) = evaluate (CInfer f)
     Construct c -> return $ Applied (Construct c) a'
     Applied a b -> return $ Applied (Applied a b) a'
 
-substitute :: Value n -> Value (Maybe n) -> Value n
+substitute :: Term n -> Term (Maybe n) -> Term n
 substitute a = flip runReader (maybe a Construct) . sub where
-  sub :: Value a -> Reader (a -> Value n) (Value n)
+  sub :: Term a -> Reader (a -> Term n) (Term n)
   sub (Construct c) = ($ c) `liftM` ask
   sub (Applied a b) = reduce <$> (Applied <$> sub a <*> sub b)
   sub (Lambda e) = Lambda `liftM` withReader
     (maybe (Construct Nothing) . (fmap Just .)) (sub e)
 
-reduce :: Value n -> Value n
+reduce :: Term n -> Term n
 reduce (Construct n) = Construct n
 reduce (Lambda e) = Lambda e
 reduce (Applied a b) = let b' = reduce b in

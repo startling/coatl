@@ -24,6 +24,46 @@ import Text.PrettyPrint.ANSI.Leijen
 -- coatl
 import Language.Coatl.Syntax
 
+-- | A canonical identifier is either a reference to another part of the
+--   program or one of the internal values: (~), (->), or Type. 
+-- 
+--  In the future I will probably extend this to take module names into
+--  account.
+data Canonical
+  = Simple Identifier
+  | Dependent
+  | Function
+  | Type
+  deriving
+  ( Eq
+  , Ord
+  , Show
+  )
+
+data Term n
+  = Lambda (Term (Maybe n))
+  | Applied (Term n) (Term n)
+  | Construct n
+  deriving
+  ( Eq
+  , Ord
+  , Show
+  , Functor
+  )
+
+-- | A Prism on binary application of constructors.
+binary :: APrism' v Canonical -> Simple Prism (Term v)
+  (Canonical, Term v, Term v)
+binary nd = prism create decompose where
+  create (c, a, b) = Applied
+    (Applied (Construct (view (re $ clonePrism nd) c)) a) b
+  decompose ck = case ck of
+    i@(Applied (Applied (Construct c) a) b) ->
+      case preview (clonePrism nd) c of
+        Nothing -> Left i
+        Just c -> Right (c, a, b)
+    elsewise -> Left elsewise
+
 data Infer a v
   = IReference a v
   | IApplication (Infer a v) (Check a v)
@@ -58,22 +98,6 @@ represent (SApplication a b) = (,) `liftM` represent a `ap` represent b
     Just a'' -> return . CInfer $ IApplication a'' b'
     Nothing -> throwError . text $ "Term is not inferrable"
 
--- | A canonical identifier is either a reference to another part of the
---   program or one of the internal values: (~), (->), or Type. 
--- 
---  In the future I will probably extend this to take module names into
---  account.
-data Canonical
-  = Simple Identifier
-  | Dependent
-  | Function
-  | Type
-  deriving
-  ( Eq
-  , Ord
-  , Show
-  )
-
 -- | Change an identifier into its canonical representation.
 canonicalize :: Identifier -> Canonical
 canonicalize (Operator "->") = Function
@@ -81,35 +105,11 @@ canonicalize (Operator "~") = Dependent
 canonicalize (Name "Type") = Type
 canonicalize o = Simple o
 
-data Value n
-  = Lambda (Value (Maybe n))
-  | Applied (Value n) (Value n)
-  | Construct n
-  deriving
-  ( Eq
-  , Ord
-  , Show
-  , Functor
-  )
-
--- | A Prism on binary application of constructors.
-binary :: APrism' v Canonical -> Simple Prism (Value v)
-  (Canonical, Value v, Value v)
-binary nd = prism create decompose where
-  create (c, a, b) = Applied
-    (Applied (Construct (view (re $ clonePrism nd) c)) a) b
-  decompose ck = case ck of
-    i@(Applied (Applied (Construct c) a) b) ->
-      case preview (clonePrism nd) c of
-        Nothing -> Left i
-        Just c -> Right (c, a, b)
-    elsewise -> Left elsewise
-
 data Environment a v = Environment
-  { _types       :: Map v (Value v)
+  { _types       :: Map v (Term v)
     -- ^ The types of things that have already been checked
     --   in the environment. They should be in normal form.
-  , _definitions :: Map v (Value v)
+  , _definitions :: Map v (Term v)
     -- ^ The values already defined.
   }
 makeLenses ''Environment
