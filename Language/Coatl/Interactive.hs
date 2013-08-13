@@ -72,7 +72,7 @@ showType s = handling $
     >>= \r -> case preview _CInfer r of
       Nothing -> throwError . text $ "Uninferrable type."
       Just ty -> lift get >>= runReaderT (infer ty) . Checking id
-        >>= liftIO . putStrLn . prettily
+        >>= liftIO . print . indent 2 . pretty
 
 showEval ::
   ( MonadIO m
@@ -84,8 +84,4 @@ showEval s = handling $
       Nothing -> throwError . text $ "Uninferrable type."
       Just ty -> lift get >>= runReaderT (infer ty) . Checking id
         >> lift get >>= runReaderT (evaluate r) . view definitions
-          >>= liftIO . putStrLn . prettily
-
--- TODO: make this prettier
-prettily :: Term () Canonical -> String
-prettily = show
+          >>= liftIO . print . indent 2 . pretty
