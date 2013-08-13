@@ -2,6 +2,7 @@
 {-# Language DeriveFoldable #-}
 {-# Language DeriveTraversable #-}
 {-# Language FlexibleContexts #-}
+{-# Language FlexibleInstances #-}
 {-# Language Rank2Types #-}
 module Language.Coatl.Abstract where
 -- base
@@ -85,10 +86,21 @@ instance Bifoldable Term where
 instance Bifunctor Term where
   bimap = bimapDefault
 
-instance Pretty n => Pretty (Term a n) where
-  pretty (Reference _ n) = pretty n
-  pretty (Applied a b) = parens (pretty a) <> parens (pretty b)
-  pretty (Lambda _ e) = braces $ text "unimplemented"
+instance Pretty (Term a Canonical) where
+  pretty = prettyPrec 0 where
+    operator :: Int -> Int -> String
+      -> Term a Canonical -> Term a Canonical -> Doc
+    operator up n o a b = (if n > up then parens else id)
+      $ prettyPrec (up + 1) a <+> text o <+> prettyPrec (up + 1) b
+    prettyPrec :: Int -> Term a Canonical -> Doc
+    prettyPrec n (Applied (Applied (Reference _ r) a) b) = case r of 
+      Simple (Operator o) -> operator 5 n o a b
+      Function -> operator 5 n "->" a b
+      Dependent -> operator 5 n "~" a b
+    prettyPrec n (Applied a b) = (if n > 10 then parens else id)
+        $ prettyPrec 10 a <+> prettyPrec 11 b
+    prettyPrec _ (Reference _ r) = pretty r
+    prettyPrec _ (Lambda _ e) = braces $ text "unimplemented"
 
 -- | A Prism on binary application of constructors.
 binary :: APrism' v Canonical -> Simple Prism (Term () v)
