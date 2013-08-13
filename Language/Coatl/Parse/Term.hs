@@ -20,7 +20,7 @@
 --   (though there will be some complications with 'Parsing'
 --   instances), and we will probably want to expose a way to specify
 --   additions to the operator table.
-module Language.Coatl.Parse.Expression where
+module Language.Coatl.Parse.Term where
 -- base
 import Control.Applicative
 -- parsers

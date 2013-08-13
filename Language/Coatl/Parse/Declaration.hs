@@ -6,7 +6,7 @@ import Text.Trifecta
 -- coatl
 import Language.Coatl.Abstract
 import Language.Coatl.Parse.Common
-import Language.Coatl.Parse.Expression
+import Language.Coatl.Parse.Term
 
 -- | Parse a top-level type signature.
 signature :: DeltaParsing m => m (Declaration Span Identifier)

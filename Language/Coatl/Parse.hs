@@ -3,5 +3,5 @@ module Language.Coatl.Parse
   , expression
   ) where
 -- coatl
-import Language.Coatl.Parse.Expression
+import Language.Coatl.Parse.Term
 import Language.Coatl.Parse.Declaration
