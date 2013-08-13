@@ -40,7 +40,7 @@ data Command
   )
 
 command :: DeltaParsing f => f (Maybe Command)
-command = Just <$> cs <|> Nothing <$ (spaces *> eof) where
+command = Just <$> cs <|> Nothing <$ spaces where
   cs = 
           TypeC <$> (symbol ":t" *> expression)
       <|> EvalC <$> expression
@@ -50,7 +50,7 @@ interactive :: MonadException m => m (Environment Span Canonical)
 interactive = flip execStateT standard . runInputT settings
   . (() <$) . iterateWhile id $ do
     line <- getInputLine . show . dullcyan . text $ "> "
-    case parseString command mempty <$> line of
+    case parseString (command <* eof) mempty <$> line of
       Nothing -> return True
       Just (Failure f) -> True <$ liftIO (print $ indent 2 f)
       Just (Success Nothing) -> return True
