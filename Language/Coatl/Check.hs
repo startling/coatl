@@ -1,5 +1,6 @@
 {-# Language FlexibleContexts #-}
 {-# Language GeneralizedNewtypeDeriving #-}
+-- | Check declarations.
 module Language.Coatl.Check where
 -- base
 import Control.Applicative
