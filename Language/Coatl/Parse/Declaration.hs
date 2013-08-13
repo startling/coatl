@@ -4,7 +4,7 @@ import Control.Applicative
 -- trifecta
 import Text.Trifecta
 -- coatl
-import Language.Coatl.Syntax
+import Language.Coatl.Abstract
 import Language.Coatl.Parse.Common
 import Language.Coatl.Parse.Expression
 

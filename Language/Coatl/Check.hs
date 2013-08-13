@@ -65,7 +65,6 @@ import Text.PrettyPrint.ANSI.Leijen (Doc, text)
 import Text.Trifecta hiding (text)
 -- coatl
 import Language.Coatl.Graph
-import Language.Coatl.Syntax
 import Language.Coatl.Abstract
 import Language.Coatl.Evaluate
 import Language.Coatl.Check.Types

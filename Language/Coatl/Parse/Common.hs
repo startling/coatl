@@ -10,7 +10,7 @@ import qualified Text.Parser.Token.Highlight as Highlight
 -- trifecta
 import Text.Trifecta
 -- coatl
-import Language.Coatl.Syntax
+import Language.Coatl.Abstract
 
 -- | The identifier style defining ordinary names.
 nameStyle :: CharParsing m => IdentifierStyle m

@@ -21,7 +21,6 @@ import Control.Lens
 import Text.PrettyPrint.ANSI.Leijen
 -- coatl
 import Language.Coatl.Abstract
-import Language.Coatl.Syntax
 import Language.Coatl.Evaluate
 
 data Checking a v = Checking

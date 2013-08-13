@@ -20,9 +20,18 @@ import Data.Bifunctor
 -- lens
 import Control.Lens
 -- ansi-wl-pprint
-import Text.PrettyPrint.ANSI.Leijen
--- coatl
-import Language.Coatl.Syntax
+import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
+
+-- | We have two semantically distinct types of identifiers in coatl,
+--   names and operators. This type distinguishes them.
+data Identifier
+  = Name String
+  | Operator String
+  deriving
+  ( Eq
+  , Ord
+  , Show
+  )
 
 -- | A canonical identifier is either a reference to another part of the
 --   program or one of the internal values: (~), (->), or Type. 
@@ -49,7 +58,22 @@ data Term a n
   , Ord
   , Show
   , Functor
+  , Foldable
+  , Traversable
   )
+
+instance Bitraversable Term where
+  bitraverse f g (Reference a n) = Reference <$> f a <*> g n
+  bitraverse f g (Applied a b) = Applied
+    <$> bitraverse f g a <*> bitraverse f g b
+  bitraverse f g (Lambda a e) = Lambda <$> f a
+    <*> bitraverse f (traverse g) e
+
+instance Bifoldable Term where
+  bifoldMap = bifoldMapDefault
+
+instance Bifunctor Term where
+  bimap = bimapDefault
 
 -- | A Prism on binary application of constructors.
 binary :: APrism' v Canonical -> Simple Prism (Term () v)
@@ -63,6 +87,27 @@ binary nd = prism create decompose where
         Nothing -> Left i
         Just c -> Right (c, a, b)
     elsewise -> Left elsewise
+
+-- | A type for declarations.
+data Declaration a v
+  = Definition
+  { _label :: a
+  , _lhs   :: v
+  , _rhs   :: Term a v
+  }
+  | Signature
+  { _label :: a
+  , _lhs   :: v
+  , _rhs   :: Term a v
+  } deriving
+  ( Eq
+  , Show
+  , Functor
+  , Foldable
+  , Traversable
+  )
+makeLenses ''Declaration
+makePrisms ''Declaration
 
 data Infer a v
   = IReference a v
@@ -90,10 +135,10 @@ data Check a v
 makePrisms ''Check
 
 -- | Represent some 'Syntax' as a 'Check'.
-represent :: MonadError Doc m => Syntax a v -> m (Check a v)
-represent (SReference a v) = return . CInfer $ IReference a v
-represent (SLambda a e) = CLambda a `liftM` represent e
-represent (SApplication a b) = (,) `liftM` represent a `ap` represent b
+represent :: MonadError Doc m => Term a v -> m (Check a v)
+represent (Reference a v) = return . CInfer $ IReference a v
+represent (Lambda a e) = CLambda a `liftM` represent e
+represent (Applied a b) = (,) `liftM` represent a `ap` represent b
   >>= \(a', b') -> case preview _CInfer a' of
     Just a'' -> return . CInfer $ IApplication a'' b'
     Nothing -> throwError . text $ "Term () is not inferrable"
