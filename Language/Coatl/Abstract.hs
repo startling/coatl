@@ -14,6 +14,9 @@ import Control.Monad.Error
 -- containers
 import Data.Map (Map)
 import qualified Data.Map as M
+-- mtl
+import Control.Monad.Writer
+import Control.Monad.State
 -- bifunctors
 import Data.Bitraversable
 import Data.Bifoldable

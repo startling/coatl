@@ -70,6 +70,7 @@ parsing = do
       it "parses infix operators" $ do
         expression `shouldParse` "a -> b"
         expression `shouldParse` "a ~ b"
+        expression `shouldParse` "a + b"
       it "parses unary lambdas" $ do
         expression `shouldParse` "{a => a}"
       it "parses n-ary lambdas where n > 1" $ do
