@@ -264,9 +264,9 @@ checks = do
     checksAs v s = let
       ?state = ()
       ?read = Checking id
-          . set (types . at (Simple $ Name "a")) (Just $ Construct Type)
+          . set (types . at (Simple $ Name "a")) (Just $ Reference Type)
           . set (definitions . at (Simple $ Name "a"))
-            (Just . Construct . Simple . Name $ "a")
+            (Just . Reference . Simple . Name $ "a")
           $ standard
       in succeeds $ do
         -- Parse both expressions
@@ -285,39 +285,39 @@ evaluation = do
   describe "Language.Coatl.Evaluate" $ do
     describe "evaluate" $ do
       let
-        id' = Lambda $ Construct Nothing
-        id'' = Lambda . Lambda $ Construct Nothing 
+        id' = Lambda $ Reference Nothing
+        id'' = Lambda . Lambda $ Reference Nothing 
         flip' = Lambda . Lambda . Lambda
-          . Applied (Applied (Construct . Just . Just $ Nothing)
-            $ Construct Nothing)
-          $ Construct (Just Nothing)
-        const' = Lambda . Lambda . Construct . Just $ Nothing
+          . Applied (Applied (Reference . Just . Just $ Nothing)
+            $ Reference Nothing)
+          $ Reference (Just Nothing)
+        const' = Lambda . Lambda . Reference . Just $ Nothing
       let
         ?read = M.fromList
           [ ( Simple $ Name "id", id' )
           , ( Simple $ Name "id'", id'' )
           , ( Simple $ Name "const", const' )
           , ( Simple $ Name "flip", flip' )
-          , ( Simple $ Name "A", Construct "A" )
-          , ( Simple $ Name "a", Construct "a" )
-          , ( Simple $ Name "b", Construct "b" )
+          , ( Simple $ Name "A", Reference "A" )
+          , ( Simple $ Name "a", Reference "a" )
+          , ( Simple $ Name "b", Reference "b" )
           ]
       it "evaluates monomorphic 'id' correctly" $ do
         "{a => a}" `evaluatesTo` id'
       it "evaluates applications of monomorphic 'id' correctly" $ do
-        "id a" `evaluatesTo` Construct "a"
+        "id a" `evaluatesTo` Reference "a"
       it "evaluates monomorphic 'const' correctly" $ do
         "{a _ => a}" `evaluatesTo` const'
       it "evaluates applications of monomorphic 'const' correctly" $ do
-        "const a b" `evaluatesTo` Construct "a"
+        "const a b" `evaluatesTo` Reference "a"
       it "evaluate monomorphic 'flip' correctly" $ do
         "{f b a => f a b}" `evaluatesTo` flip'
       it "evaluates applications of monomorphic 'flip' correctly" $ do
-        "flip const a b" `evaluatesTo` Construct "b"
+        "flip const a b" `evaluatesTo` Reference "b"
       it "evaluates polymorphic 'id' correctly" $ do
         "{_ a => a}" `evaluatesTo` id''
       it "evaluates applications of polymorphic 'id' correctly" $ do
-        "id' A a" `evaluatesTo` Construct "a"
+        "id' A a" `evaluatesTo` Reference "a"
   where
     evaluatesTo ::
       ( Show v, Ord v

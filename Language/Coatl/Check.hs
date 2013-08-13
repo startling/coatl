@@ -137,7 +137,7 @@ checkDeclaration (Signature _ l r) = get >>= \s -> do
   -- Find the representation of signature.
   r' <- represent r
   -- Check that the signature has type 'Type'.
-  runReaderT (check r' $ Construct Type) (Checking id s)
+  runReaderT (check r' $ Reference Type) (Checking id s)
   -- Evaluate the signature.
   v <- runReaderT (evaluate r') (view definitions s)
   -- Set the signature at this lhs to the value.

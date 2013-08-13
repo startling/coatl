@@ -78,7 +78,7 @@ check (CLambda _ l) t = view named
     -- with a parameter of the argument type.
     Just (Function, a, b) -> with a $ check l (fmap Just b)
     Just (Dependent, a, b) -> with a $ check l
-      (reduce $ Applied (fmap Just b) (Construct Nothing))
+      (reduce $ Applied (fmap Just b) (Reference Nothing))
     a -> throwError . text
       $ printf "Expected a function type: %s" (show t)
 check (CInfer i) t = infer i >>= \it -> if it == t

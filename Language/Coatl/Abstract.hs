@@ -43,7 +43,7 @@ data Canonical
 data Term n
   = Lambda (Term (Maybe n))
   | Applied (Term n) (Term n)
-  | Construct n
+  | Reference n
   deriving
   ( Eq
   , Ord
@@ -56,9 +56,9 @@ binary :: APrism' v Canonical -> Simple Prism (Term v)
   (Canonical, Term v, Term v)
 binary nd = prism create decompose where
   create (c, a, b) = Applied
-    (Applied (Construct (view (re $ clonePrism nd) c)) a) b
+    (Applied (Reference (view (re $ clonePrism nd) c)) a) b
   decompose ck = case ck of
-    i@(Applied (Applied (Construct c) a) b) ->
+    i@(Applied (Applied (Reference c) a) b) ->
       case preview (clonePrism nd) c of
         Nothing -> Left i
         Just c -> Right (c, a, b)
@@ -127,7 +127,7 @@ makeLenses ''Environment
 --   to corresponding constructors.
 standard :: Environment a Canonical
 standard = Environment types defs where
-  type_ = Construct Type
+  type_ = Reference Type
   function f a b = (Function, a, b) ^. (re $ binary f)
   dependent a b = (Dependent, a, b) ^. (re $ binary id)
   types = M.fromList
@@ -136,11 +136,11 @@ standard = Environment types defs where
     , (Dependent, dependent type_ . Lambda
       $ function _Just
           (function _Just
-            (Construct Nothing) (Construct $ Just Type))
-          (Construct $ Just Type))
+            (Reference Nothing) (Reference $ Just Type))
+          (Reference $ Just Type))
     ]
   defs = M.fromList
-    [ (Type, Construct Type)
-    , (Dependent, Construct Dependent)
-    , (Function, Construct Function)
+    [ (Type, Reference Type)
+    , (Dependent, Reference Dependent)
+    , (Function, Reference Function)
     ]
