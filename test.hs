@@ -212,6 +212,11 @@ checks = do
         (False, Simple $ Name "y") `dependsOn` (False, Simple $ Name "x")
       it "has definitions depend on signatures" $ do
         (False, Simple $ Name "y") `dependsOn` (True, Simple $ Name "x")
+    describe "names" $ do
+      it "fails for simple references to nonexistent names" $ do
+        fails . names . fmap canonicalize . Reference () . Name $ "boo"
+      it "succeeds for simple references to extant names" $ do
+        succeeds . names . Reference () $ Type
     describe "declarations" $ do
       it "errors for trivially unproductively-recursive functions" $ do
         let
