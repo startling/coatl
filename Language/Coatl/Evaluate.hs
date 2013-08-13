@@ -16,20 +16,20 @@ import qualified Data.Map as M
 -- lens
 import Control.Lens
 -- ansi-wl-pprint
-import Text.PrettyPrint.ANSI.Leijen (Doc, text)
+import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 -- coatl
 import Language.Coatl.Abstract
 
 evaluate ::
-  ( Ord v, Show v
+  ( Ord v, Pretty v
   , MonadError Doc m )
   => Check a v -> ReaderT (Map v (Term () n)) m (Term () n)
 evaluate (CLambda _ n) = Lambda () `liftM` withReaderT
   (set (at Nothing) (Just $ Reference () Nothing)
   . M.mapKeys Just . fmap (fmap Just)) (evaluate n)
 evaluate (CInfer (IReference _ v)) = view (at v) >>= flip maybe return
-  (throwError . text $
-    printf "Symbol not in scope during evaluation: \"%s\"." (show v))
+  (throwError $
+    text "Symbol not in scope (during evaluation):" <+> pretty v)
 evaluate (CInfer (IApplication f a)) = evaluate (CInfer f)
   >>= \f' -> evaluate a >>= \a' -> case f' of
     Lambda () n -> return $ substitute a' n

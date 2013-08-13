@@ -47,14 +47,14 @@ with a = withReaderT (set (environment . types . at Nothing)
 
 -- | Infer the type of an 'Infer' term.
 infer ::
-  ( Ord v, Show v
+  ( Ord v, Pretty v
   , MonadError Doc m )
   => Infer b v -> ReaderT (Checking a v) m (Term () v)
 infer (IReference _ v) = view (environment . types . at v)
   >>= maybe report return where
     report :: MonadError Doc m => m a
-    report = throwError . text $
-      printf "Symbol not in scope: \"%s\"" (show v)
+    report = throwError $
+      text "Symbol not in scope:" <+> pretty v
 infer (IApplication f ar) = view named >>= \nd ->
   infer f >>= \ft ->
     case preview (binary nd) ft of
@@ -63,11 +63,11 @@ infer (IApplication f ar) = view named >>= \nd ->
         >> (reduce . Applied b) `liftM`
           magnify (environment . definitions) (evaluate ar)
       _ -> throwError . text
-        $ printf "Expected a function type: %s" (show ft)
+        $ "Expected a function type."
 
 -- | Check the type of some 'Check' term.
 check ::
-  ( Ord v, Show v
+  ( Ord v, Pretty v
   , MonadError Doc m )
   => Check a v -> Term () v -> ReaderT (Checking b v) m ()
 check (CLambda _ l) t = view named
@@ -79,6 +79,6 @@ check (CLambda _ l) t = view named
     Just (Dependent, a, b) -> with a $ check l
       (reduce $ Applied (fmap Just b) (Reference () Nothing))
     a -> throwError . text
-      $ printf "Expected a function type: %s" (show t)
+      $ "Expected a function type."
 check (CInfer i) t = infer i >>= \it -> if it == t
   then return () else throwError . text $ "Type mismatch."
