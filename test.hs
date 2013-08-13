@@ -264,9 +264,9 @@ checks = do
     checksAs v s = let
       ?state = ()
       ?read = Checking id
-          . set (types . at (Simple $ Name "a")) (Just $ Reference Type)
+          . set (types . at (Simple $ Name "a")) (Just $ Reference () Type)
           . set (definitions . at (Simple $ Name "a"))
-            (Just . Reference . Simple . Name $ "a")
+            (Just . Reference () . Simple . Name $ "a")
           $ standard
       in succeeds $ do
         -- Parse both expressions
@@ -285,44 +285,44 @@ evaluation = do
   describe "Language.Coatl.Evaluate" $ do
     describe "evaluate" $ do
       let
-        id' = Lambda $ Reference Nothing
-        id'' = Lambda . Lambda $ Reference Nothing 
-        flip' = Lambda . Lambda . Lambda
-          . Applied (Applied (Reference . Just . Just $ Nothing)
-            $ Reference Nothing)
-          $ Reference (Just Nothing)
-        const' = Lambda . Lambda . Reference . Just $ Nothing
+        id' = Lambda () $ Reference () Nothing
+        id'' = Lambda () . Lambda () $ Reference () Nothing 
+        flip' = Lambda () . Lambda () . Lambda ()
+          . Applied (Applied (Reference () . Just . Just $ Nothing)
+            $ Reference () Nothing)
+          $ Reference () (Just Nothing)
+        const' = Lambda () . Lambda () . Reference () . Just $ Nothing
       let
         ?read = M.fromList
           [ ( Simple $ Name "id", id' )
           , ( Simple $ Name "id'", id'' )
           , ( Simple $ Name "const", const' )
           , ( Simple $ Name "flip", flip' )
-          , ( Simple $ Name "A", Reference "A" )
-          , ( Simple $ Name "a", Reference "a" )
-          , ( Simple $ Name "b", Reference "b" )
+          , ( Simple $ Name "A", Reference () "A" )
+          , ( Simple $ Name "a", Reference () "a" )
+          , ( Simple $ Name "b", Reference () "b" )
           ]
       it "evaluates monomorphic 'id' correctly" $ do
         "{a => a}" `evaluatesTo` id'
       it "evaluates applications of monomorphic 'id' correctly" $ do
-        "id a" `evaluatesTo` Reference "a"
+        "id a" `evaluatesTo` Reference () "a"
       it "evaluates monomorphic 'const' correctly" $ do
         "{a _ => a}" `evaluatesTo` const'
       it "evaluates applications of monomorphic 'const' correctly" $ do
-        "const a b" `evaluatesTo` Reference "a"
+        "const a b" `evaluatesTo` Reference () "a"
       it "evaluate monomorphic 'flip' correctly" $ do
         "{f b a => f a b}" `evaluatesTo` flip'
       it "evaluates applications of monomorphic 'flip' correctly" $ do
-        "flip const a b" `evaluatesTo` Reference "b"
+        "flip const a b" `evaluatesTo` Reference () "b"
       it "evaluates polymorphic 'id' correctly" $ do
         "{_ a => a}" `evaluatesTo` id''
       it "evaluates applications of polymorphic 'id' correctly" $ do
-        "id' A a" `evaluatesTo` Reference "a"
+        "id' A a" `evaluatesTo` Reference () "a"
   where
     evaluatesTo ::
       ( Show v, Ord v
-      , ?read :: Map Canonical (Term v) )
-      => String -> Term v -> Expectation
+      , ?read :: Map Canonical (Term () v) )
+      => String -> Term () v -> Expectation
     evaluatesTo s v = let ?state = () in succeeds
       $ case parseString expression mempty s of
         Failure f -> throwError . text

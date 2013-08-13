@@ -35,7 +35,7 @@ makeLenses ''Checking
 -- | Run a checking action in an environment with something new
 --   as 'Nothing'.
 with :: Ord v
-  => Term v
+  => Term () v
   -> ReaderT (Checking a (Maybe v)) m b
   -> ReaderT (Checking a v) m b
 with a = withReaderT (set (environment . types . at Nothing)
@@ -50,7 +50,7 @@ with a = withReaderT (set (environment . types . at Nothing)
 infer ::
   ( Ord v, Show v
   , MonadError Doc m )
-  => Infer b v -> ReaderT (Checking a v) m (Term v)
+  => Infer b v -> ReaderT (Checking a v) m (Term () v)
 infer (IReference _ v) = view (environment . types . at v)
   >>= maybe report return where
     report :: MonadError Doc m => m a
@@ -70,7 +70,7 @@ infer (IApplication f ar) = view named >>= \nd ->
 check ::
   ( Ord v, Show v
   , MonadError Doc m )
-  => Check a v -> Term v -> ReaderT (Checking b v) m ()
+  => Check a v -> Term () v -> ReaderT (Checking b v) m ()
 check (CLambda _ l) t = view named
   >>= \nd -> case preview (binary nd) t of
     -- If we're checking this lambda form as a function,
@@ -78,7 +78,7 @@ check (CLambda _ l) t = view named
     -- with a parameter of the argument type.
     Just (Function, a, b) -> with a $ check l (fmap Just b)
     Just (Dependent, a, b) -> with a $ check l
-      (reduce $ Applied (fmap Just b) (Reference Nothing))
+      (reduce $ Applied (fmap Just b) (Reference () Nothing))
     a -> throwError . text
       $ printf "Expected a function type: %s" (show t)
 check (CInfer i) t = infer i >>= \it -> if it == t

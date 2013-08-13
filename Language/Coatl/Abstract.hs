@@ -40,10 +40,10 @@ data Canonical
   , Show
   )
 
-data Term n
-  = Lambda (Term (Maybe n))
-  | Applied (Term n) (Term n)
-  | Reference n
+data Term a n
+  = Lambda a (Term a (Maybe n))
+  | Applied (Term a n) (Term a n)
+  | Reference a n
   deriving
   ( Eq
   , Ord
@@ -52,13 +52,13 @@ data Term n
   )
 
 -- | A Prism on binary application of constructors.
-binary :: APrism' v Canonical -> Simple Prism (Term v)
-  (Canonical, Term v, Term v)
+binary :: APrism' v Canonical -> Simple Prism (Term () v)
+  (Canonical, Term () v, Term () v)
 binary nd = prism create decompose where
   create (c, a, b) = Applied
-    (Applied (Reference (view (re $ clonePrism nd) c)) a) b
+    (Applied (Reference () (view (re $ clonePrism nd) c)) a) b
   decompose ck = case ck of
-    i@(Applied (Applied (Reference c) a) b) ->
+    i@(Applied (Applied (Reference () c) a) b) ->
       case preview (clonePrism nd) c of
         Nothing -> Left i
         Just c -> Right (c, a, b)
@@ -96,7 +96,7 @@ represent (SLambda a e) = CLambda a `liftM` represent e
 represent (SApplication a b) = (,) `liftM` represent a `ap` represent b
   >>= \(a', b') -> case preview _CInfer a' of
     Just a'' -> return . CInfer $ IApplication a'' b'
-    Nothing -> throwError . text $ "Term is not inferrable"
+    Nothing -> throwError . text $ "Term () is not inferrable"
 
 -- | Change an identifier into its canonical representation.
 canonicalize :: Identifier -> Canonical
@@ -106,10 +106,10 @@ canonicalize (Name "Type") = Type
 canonicalize o = Simple o
 
 data Environment a v = Environment
-  { _types       :: Map v (Term v)
+  { _types       :: Map v (Term () v)
     -- ^ The types of things that have already been checked
     --   in the environment. They should be in normal form.
-  , _definitions :: Map v (Term v)
+  , _definitions :: Map v (Term () v)
     -- ^ The values already defined.
   }
 makeLenses ''Environment
@@ -127,20 +127,20 @@ makeLenses ''Environment
 --   to corresponding constructors.
 standard :: Environment a Canonical
 standard = Environment types defs where
-  type_ = Reference Type
+  type_ = Reference () Type
   function f a b = (Function, a, b) ^. (re $ binary f)
   dependent a b = (Dependent, a, b) ^. (re $ binary id)
   types = M.fromList
     [ (Type, type_)
     , (Function, function id type_ $ function id type_ type_)
-    , (Dependent, dependent type_ . Lambda
+    , (Dependent, dependent type_ . Lambda ()
       $ function _Just
           (function _Just
-            (Reference Nothing) (Reference $ Just Type))
-          (Reference $ Just Type))
+            (Reference () Nothing) (Reference () $ Just Type))
+          (Reference () $ Just Type))
     ]
   defs = M.fromList
-    [ (Type, Reference Type)
-    , (Dependent, Reference Dependent)
-    , (Function, Reference Function)
+    [ (Type, Reference () Type)
+    , (Dependent, Reference () Dependent)
+    , (Function, Reference () Function)
     ]
