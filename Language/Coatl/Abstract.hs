@@ -14,6 +14,9 @@ import Control.Monad.Error
 -- containers
 import Data.Map (Map)
 import qualified Data.Map as M
+-- mtl
+import Control.Monad.Writer
+import Control.Monad.State
 -- bifunctors
 import Data.Bitraversable
 import Data.Bifoldable
@@ -22,6 +25,8 @@ import Data.Bifunctor
 import Control.Lens
 -- ansi-wl-pprint
 import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
+-- monad-loops
+import Control.Monad.Loops
 
 -- | We have two semantically distinct types of identifiers in coatl,
 --   names and operators. This type distinguishes them.
@@ -77,8 +82,7 @@ instance Monad (Term ()) where
   return = Reference ()
   Reference _ a >>= f = f a
   Applied a b >>= f = Applied (a >>= f) (b >>= f)
-  Lambda _ e >>= f = Lambda () $ e >>= maybe
-    (return Nothing) (fmap Just . f)
+  Lambda _ e >>= f = Lambda () $ e >>= maybe (return Nothing) (fmap Just . f)
 
 instance Bitraversable Term where
   bitraverse f g (Reference a n) = Reference <$> f a <*> g n
@@ -99,6 +103,7 @@ instance Pretty (Term a Canonical) where
       -> Term a Canonical -> Term a Canonical -> Doc
     operator up n o a b = (if n > up then parens else id)
       $ prettyPrec (up + 1) a <+> text o <+> prettyPrec (up + 1) b
+    -- Pretty-print a term given the current precedence.
     prettyPrec :: Int -> Term a Canonical -> Doc
     prettyPrec n (Applied (Applied (Reference _ r) a) b) = case r of 
       Simple (Operator o) -> operator 5 n o a b
@@ -107,7 +112,25 @@ instance Pretty (Term a Canonical) where
     prettyPrec n (Applied a b) = (if n > 10 then parens else id)
         $ prettyPrec 10 a <+> prettyPrec 11 b
     prettyPrec _ (Reference _ r) = pretty r
-    prettyPrec _ (Lambda _ e) = braces $ text "unimplemented"
+    prettyPrec _ (Lambda _ e) = braces
+      $ let (x, w) = flip evalState names . runWriterT $ inLambda e in
+        hsep w <+> text "=>" <+> x
+    -- An infinite list of names to draw from.
+    names :: [String]
+    names = (>>=) [1..] . flip replicateM $ ['a'..'z']
+    -- Pretty-print the body of a (potentially multiple-argument)
+    -- lambda, given an infinite list of names to keep as state
+    -- and writing, in order, the parameter names used.
+    inLambda ::
+      ( MonadState [String] m
+      , MonadWriter [Doc] m )
+     => Term a (Maybe Canonical) -> m Doc
+    inLambda l = (Simple . Name . head) `liftM` get
+      >>= \h -> modify tail >>
+        if elemOf traverse (Just h) l then inLambda l
+        else tell [pretty h] >> case fmap (maybe h id) l of
+          Lambda _ e -> inLambda e
+          elsewise -> return . pretty $ elsewise
 
 -- | A Prism on binary application of constructors.
 binary :: APrism' v Canonical -> Simple Prism (Term () v)
