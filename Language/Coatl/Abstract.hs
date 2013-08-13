@@ -33,6 +33,10 @@ data Identifier
   , Show
   )
 
+instance Pretty Identifier where
+  pretty (Name s) = text s
+  pretty (Operator o) = parens $ text o
+
 -- | A canonical identifier is either a reference to another part of the
 --   program or one of the internal values: (~), (->), or Type. 
 -- 
@@ -48,6 +52,12 @@ data Canonical
   , Ord
   , Show
   )
+
+instance Pretty Canonical where
+  pretty (Simple i) = pretty i
+  pretty Dependent = parens $ text "~"
+  pretty Function = parens $ text "->"
+  pretty Type = text "Type"
 
 data Term a n
   = Lambda a (Term a (Maybe n))
@@ -74,6 +84,11 @@ instance Bifoldable Term where
 
 instance Bifunctor Term where
   bimap = bimapDefault
+
+instance Pretty n => Pretty (Term a n) where
+  pretty (Reference _ n) = pretty n
+  pretty (Applied a b) = parens (pretty a) <> parens (pretty b)
+  pretty (Lambda _ e) = braces $ text "unimplemented"
 
 -- | A Prism on binary application of constructors.
 binary :: APrism' v Canonical -> Simple Prism (Term () v)
