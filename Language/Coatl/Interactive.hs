@@ -53,7 +53,7 @@ interactive = flip execStateT standard . runInputT settings
     line <- getInputLine . show . dullcyan . text $ "> "
     case parseString command mempty <$> line of
       Nothing -> return True
-      Just (Failure f) -> True <$ liftIO (print f)
+      Just (Failure f) -> True <$ liftIO (print $ indent 2 f)
       Just (Success Nothing) -> return True
       Just (Success (Just QuitC)) -> return False
       Just (Success (Just (TypeC s))) -> True <$ lift (showType s)
@@ -61,11 +61,14 @@ interactive = flip execStateT standard . runInputT settings
   where
     settings = defaultSettings
 
+handling :: MonadIO m => EitherT Doc m () -> m ()
+handling = either (liftIO . print . indent 2) return <=< runEitherT
+
 showType ::
   ( MonadIO m
   , MonadState (Environment a Canonical) m )
   => Syntax a Identifier -> m ()
-showType s = either (liftIO . print) return <=< runEitherT $
+showType s = handling $
   represent (fmap canonicalize s)
     >>= \r -> case preview _CInfer r of
       Nothing -> throwError . text $ "Uninferrable type."
@@ -76,7 +79,7 @@ showEval ::
   ( MonadIO m
   , MonadState (Environment a Canonical) m )
   => Syntax a Identifier -> m ()
-showEval s = either (liftIO . print) return <=< runEitherT $
+showEval s = handling $
   represent (fmap canonicalize s)
     >>= \r -> case preview _CInfer r of
       Nothing -> throwError . text $ "Uninferrable type."
