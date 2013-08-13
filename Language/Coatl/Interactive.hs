@@ -24,7 +24,6 @@ import Control.Monad.Trans.Either
 -- monad-loops
 import Control.Monad.Loops
 -- coatl
-import Language.Coatl.Syntax
 import Language.Coatl.Abstract
 import Language.Coatl.Parse
 import Language.Coatl.Check
@@ -32,8 +31,8 @@ import Language.Coatl.Check.Types
 import Language.Coatl.Evaluate
 
 data Command
-  = TypeC (Syntax Span Identifier)
-  | EvalC (Syntax Span Identifier)
+  = TypeC (Term Span Identifier)
+  | EvalC (Term Span Identifier)
   | QuitC
   deriving
   ( Eq
@@ -67,7 +66,7 @@ handling = either (liftIO . print . indent 2) return <=< runEitherT
 showType ::
   ( MonadIO m
   , MonadState (Environment a Canonical) m )
-  => Syntax a Identifier -> m ()
+  => Term Span Identifier -> m ()
 showType s = handling $
   represent (fmap canonicalize s)
     >>= \r -> case preview _CInfer r of
@@ -78,7 +77,7 @@ showType s = handling $
 showEval ::
   ( MonadIO m
   , MonadState (Environment a Canonical) m )
-  => Syntax a Identifier -> m ()
+  => Term Span Identifier -> m ()
 showEval s = handling $
   represent (fmap canonicalize s)
     >>= \r -> case preview _CInfer r of
@@ -88,5 +87,5 @@ showEval s = handling $
           >>= liftIO . putStrLn . prettily
 
 -- TODO: make this prettier
-prettily :: Value Canonical -> String
+prettily :: Term () Canonical -> String
 prettily = show
