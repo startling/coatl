@@ -1,3 +1,4 @@
+-- | Helpful things for parsing coatl.
 module Language.Coatl.Parse.Common where
 -- base
 import Control.Applicative
@@ -23,6 +24,7 @@ nameStyle = IdentifierStyle
   , _styleReservedHighlight = Highlight.ReservedIdentifier
   }
 
+-- | Parse a coatl name.
 name :: (Monad m, TokenParsing m) => m Identifier
 name = Name <$> ident nameStyle
 
@@ -40,6 +42,7 @@ operatorStyle = IdentifierStyle
     part = satisfy $ \x -> (isSymbol x || isPunctuation x)
       && x `notElem` "\"_{}()"
 
+-- | Parse a coatl operator.
 operator :: (Monad m, TokenParsing m) => m Identifier
 operator = Operator <$> ident operatorStyle
 

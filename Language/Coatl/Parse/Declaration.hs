@@ -1,3 +1,5 @@
+-- | Parse coatl declarations. This will probably handle things
+--   like types in the future.
 module Language.Coatl.Parse.Declaration where
 -- base
 import Control.Applicative
