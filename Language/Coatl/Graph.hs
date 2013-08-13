@@ -22,6 +22,9 @@ import Control.Lens
 -- monad-loops
 import Control.Monad.Loops
 
+-- | A graph is represented by a 'Map' of identifiers to some
+--   node type and by a fold on the node type over the identifiers
+--   with that are pointed to from that node.
 data Graph k n = Graph
   { arcs  :: Fold n k
   , nodes :: Map k n
