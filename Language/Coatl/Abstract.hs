@@ -90,7 +90,7 @@ instance Pretty Canonical where
 
 data Term a n
   = Lambda a (Term a (Maybe n))
-  | Applied (Term a n) (Term a n)
+  | Applied a (Term a n) (Term a n)
   | Reference a n
   deriving
   ( Eq
@@ -101,20 +101,26 @@ data Term a n
   , Traversable
   )
 
-instance Applicative (Term ()) where
+-- | A lens on the outermost source annotation of a @'Term' a n@.
+annotation :: Functor f => (a -> f a) -> Term a n -> f (Term a n)
+annotation f (Lambda a e) = (\n -> Lambda n e) <$> f a
+annotation f (Applied a x y) = (\n -> Applied n x y) <$> f a
+annotation f (Reference a n) = (\x -> Reference x n) <$> f a
+
+instance Monoid a => Applicative (Term a) where
   pure = return
   (<*>) = ap
 
-instance Monad (Term ()) where
-  return = Reference ()
-  Reference _ a >>= f = f a
-  Applied a b >>= f = Applied (a >>= f) (b >>= f)
-  Lambda _ e >>= f = Lambda () $ e >>= maybe (return Nothing) (fmap Just . f)
+instance Monoid a => Monad (Term a) where
+  return = Reference mempty
+  Reference a r >>= f = undefined
+  Applied a x y >>= f = Applied a (x >>= f) (y >>= f)
+  Lambda a body >>= f = Lambda a $ body >>= maybe (return Nothing) (fmap Just . f)
 
 instance Bitraversable Term where
   bitraverse f g (Reference a n) = Reference <$> f a <*> g n
-  bitraverse f g (Applied a b) = Applied
-    <$> bitraverse f g a <*> bitraverse f g b
+  bitraverse f g (Applied a x y) = Applied <$> f a
+    <*> bitraverse f g x <*> bitraverse f g y
   bitraverse f g (Lambda a e) = Lambda <$> f a
     <*> bitraverse f (traverse g) e
 
@@ -132,11 +138,11 @@ instance Pretty (Term a Canonical) where
       $ prettyPrec (up + 1) a <+> text o <+> prettyPrec (up + 1) b
     -- Pretty-print a term given the current precedence.
     prettyPrec :: Int -> Term a Canonical -> Doc
-    prettyPrec n (Applied (Applied (Reference _ r) a) b) = case r of 
+    prettyPrec n (Applied _ (Applied _ (Reference _ r) a) b) = case r of 
       Simple (Operator o) -> operator 5 n o a b
       Function -> operator 5 n "->" a b
       Dependent -> operator 5 n "~" a b
-    prettyPrec n (Applied a b) = (if n > 10 then parens else id)
+    prettyPrec n (Applied _ a b) = (if n > 10 then parens else id)
         $ prettyPrec 10 a <+> prettyPrec 11 b
     prettyPrec _ (Reference _ r) = pretty r
     prettyPrec _ (Lambda _ e) = braces
@@ -163,10 +169,10 @@ instance Pretty (Term a Canonical) where
 binary :: APrism' v Canonical -> Simple Prism (Term () v)
   (Canonical, Term () v, Term () v)
 binary nd = prism create decompose where
-  create (c, a, b) = Applied
-    (Applied (Reference () (view (re $ clonePrism nd) c)) a) b
+  create (c, a, b) = Applied ()
+    (Applied () (Reference () (view (re $ clonePrism nd) c)) a) b
   decompose ck = case ck of
-    i@(Applied (Applied (Reference () c) a) b) ->
+    i@(Applied _ (Applied _ (Reference _ c) a) b) ->
       case preview (clonePrism nd) c of
         Nothing -> Left i
         Just c -> Right (c, a, b)
@@ -195,7 +201,7 @@ makePrisms ''Declaration
 
 data Infer a v
   = IReference a v
-  | IApplication (Infer a v) (Check a v)
+  | IApplication a (Infer a v) (Check a v)
   deriving
   ( Eq
   , Ord
@@ -222,9 +228,9 @@ makePrisms ''Check
 represent :: MonadError Doc m => Term a v -> m (Check a v)
 represent (Reference a v) = return . CInfer $ IReference a v
 represent (Lambda a e) = CLambda a `liftM` represent e
-represent (Applied a b) = (,) `liftM` represent a `ap` represent b
-  >>= \(a', b') -> case preview _CInfer a' of
-    Just a'' -> return . CInfer $ IApplication a'' b'
+represent (Applied a x y) = (,) `liftM` represent x `ap` represent y
+  >>= \(x', y') -> case preview _CInfer x' of
+    Just x'' -> return . CInfer $ IApplication a x'' y'
     Nothing -> throwError . text $ "Term () is not inferrable"
 
 -- | Change an identifier into its canonical representation.

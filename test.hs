@@ -293,7 +293,7 @@ evaluation = do
         id' = Lambda () $ Reference () Nothing
         id'' = Lambda () . Lambda () $ Reference () Nothing 
         flip' = Lambda () . Lambda () . Lambda ()
-          . Applied (Applied (Reference () . Just . Just $ Nothing)
+          . Applied () (Applied () (Reference () . Just . Just $ Nothing)
             $ Reference () Nothing)
           $ Reference () (Just Nothing)
         const' = Lambda () . Lambda () . Reference () . Just $ Nothing

@@ -33,11 +33,11 @@ evaluate (CLambda _ n) = Lambda () `liftM` withReaderT
 evaluate (CInfer (IReference _ v)) = view (at v) >>= flip maybe return
   (throwError $
     text "Symbol not in scope (during evaluation):" <+> pretty v)
-evaluate (CInfer (IApplication f a)) = evaluate (CInfer f)
+evaluate (CInfer (IApplication _ f a)) = evaluate (CInfer f)
   >>= \f' -> evaluate a >>= \a' -> case f' of
     Lambda () n -> return $ substitute a' n
-    Reference () c -> return $ Applied (Reference () c) a'
-    Applied a b -> return $ Applied (Applied a b) a'
+    Reference () c -> return $ Applied () (Reference () c) a'
+    Applied () a b -> return $ Applied () (Applied () a b) a'
 
 -- | Substitute a parameter into a lambda body and evaluate the
 --   result to normal form.
@@ -45,7 +45,7 @@ substitute :: Term () n -> Term () (Maybe n) -> Term () n
 substitute a = flip runReader (maybe a $ Reference ()) . sub where
   sub :: Term () a -> Reader (a -> Term () n) (Term () n)
   sub (Reference () c) = ($ c) `liftM` ask
-  sub (Applied a b) = reduce <$> (Applied <$> sub a <*> sub b)
+  sub (Applied () a b) = reduce <$> (Applied () <$> sub a <*> sub b)
   sub (Lambda () e) = Lambda () `liftM` withReader
     (maybe (Reference () Nothing) . (fmap Just .)) (sub e)
 
@@ -53,8 +53,8 @@ substitute a = flip runReader (maybe a $ Reference ()) . sub where
 reduce :: Term () n -> Term () n
 reduce (Reference () n) = Reference () n
 reduce (Lambda () e) = Lambda () e
-reduce (Applied a b) = let b' = reduce b in
+reduce (Applied () a b) = let b' = reduce b in
   case reduce a of
     Lambda () e -> substitute b' e
-    elsewise -> Applied elsewise b'
+    elsewise -> Applied () elsewise b'
 

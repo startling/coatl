@@ -23,6 +23,8 @@
 module Language.Coatl.Parse.Term where
 -- base
 import Control.Applicative
+import Control.Monad
+import Data.Monoid
 -- parsers
 import Text.Parser.Expression
 -- trifecta
@@ -35,14 +37,15 @@ import Language.Coatl.Parse.Common
 inner :: DeltaParsing f
   => (Term Span Identifier -> Term Span v)
   -> f v -> f (Term Span v)
-inner l f = buildExpressionParser table (applied l f) <?> "expression"
-  where
-    application l s sp a b = Applied
-      (Applied (l $ Reference sp (Operator s)) a) b
-    binary s a = Infix (application l s <$> spanning (symbol s)) a
+inner l f = buildExpressionParser table (applied l f)
+  <?> "expression" where
+    -- This might annotate things slightly confusingly;
+    -- I can't see of a better way to do it.
+    binary (s :~ sp) t u = Applied sp 
+      (Applied sp (l $ Reference sp $ Operator s) t) u
     table =
-      [ [ binary "->" AssocRight ]
-      , [ binary "~" AssocLeft ]
+      [ [ Infix (binary <$> spanned (symbol "->")) AssocRight ]
+      , [ Infix (binary <$> spanned (symbol "~")) AssocLeft ]
       ]
 
 -- | Parse any non-zero-length sequence of simple values,
@@ -50,7 +53,16 @@ inner l f = buildExpressionParser table (applied l f) <?> "expression"
 applied :: DeltaParsing f
   => (Term Span Identifier -> Term Span v)
   -> f v -> f (Term Span v)
-applied l f = foldl1 Applied <$> some (single l f)
+applied l f = position >>= \start -> line >>= \li -> do
+  -- This is messy in order to preserve source information
+  -- about applications. Basically, having gathered information about
+  -- the start, we get every applied value and its end position.
+  as <- some $ (,) <$> single l f <*> position
+  -- Then we fold over that list and create 'Applied's out of it, using
+  -- the start position and each item's end position to create the
+  -- right 'Span'.
+  return . fst . flip foldl1 as $ \(t, _) (u, r) ->
+    (Applied (Span start r li) t u, r)
 
 -- | Parse a simple value; that is, a reference, lambda,
 --   or any parenthesized expression.

@@ -56,12 +56,12 @@ infer (IReference _ v) = view (environment . types . at v)
     report :: MonadError Doc m => m a
     report = throwError $
       text "Symbol not in scope:" <+> pretty v
-infer (IApplication f ar) = view named >>= \nd ->
+infer (IApplication _ f ar) = view named >>= \nd ->
   infer f >>= \ft ->
     case preview (binary nd) ft of
       Just (Function, a, b) -> check ar a >> return b
       Just (Dependent, a, b) -> check ar a
-        >> (reduce . Applied b) `liftM`
+        >> (reduce . Applied () b) `liftM`
           magnify (environment . definitions) (evaluate ar)
       _ -> throwError . text
         $ "Expected a function type."
@@ -78,7 +78,7 @@ check (CLambda _ l) t = view named
     -- with a parameter of the argument type.
     Just (Function, a, b) -> with a $ check l (fmap Just b)
     Just (Dependent, a, b) -> with a $ check l
-      (reduce $ Applied (fmap Just b) (Reference () Nothing))
+      (reduce $ Applied () (fmap Just b) (Reference () Nothing))
     a -> throwError . text
       $ "Expected a function type."
 check (CInfer i) t = infer i >>= \it -> if it == t
