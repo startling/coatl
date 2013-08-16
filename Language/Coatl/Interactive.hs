@@ -67,8 +67,10 @@ interactive = runInputT settings . (() <$) . iterateWhile id $ do
     Just (Failure f) -> True <$ liftIO (print $ indent 2 f)
     Just (Success Nothing) -> return True
     Just (Success (Just QuitC)) -> return False
-    Just (Success (Just (TypeC s))) -> True <$ lift (showType s)
-    Just (Success (Just (EvalC s))) -> True <$ lift (showEval s)
+    Just (Success (Just (TypeC s))) -> True
+      <$ lift (showType $ fmap canonicalize s)
+    Just (Success (Just (EvalC s))) -> True
+      <$ lift (showEval $ fmap canonicalize s)
     Just (Success (Just (LoadC f))) -> True <$ lift (loadFile f)
   where
     settings = defaultSettings
@@ -90,26 +92,20 @@ loadFile f = handling $ parseFromFileEx (many declaration) f
 showType ::
   ( MonadIO m
   , MonadState (Environment a Canonical) m )
-  => Term Span Identifier -> m ()
-showType s = handling $
-  represent (fmap canonicalize s)
-    >>= \r -> case preview _CInfer r of
-      Nothing -> throwError . text $ "Uninferrable type."
-      Just ty -> lift get >>= runReaderT (infer ty) . Checking id
-        >>= liftIO . present
+  => Term Span Canonical -> m ()
+showType s = handling $ lift get
+  >>= runReaderT (infer s) . Checking id
+    >>= liftIO . present
 
 -- | Evaluate and pretty-print a term.
 showEval ::
   ( MonadIO m
   , MonadState (Environment a Canonical) m )
-  => Term Span Identifier -> m ()
-showEval s = handling $
-  represent (fmap canonicalize s)
-    >>= \r -> case preview _CInfer r of
-      Nothing -> throwError . text $ "Uninferrable type."
-      Just ty -> lift get >>= runReaderT (infer ty) . Checking id
-        >> lift get >>= runReaderT (evaluate r) . view definitions
-          >>= liftIO . present
+  => Term Span Canonical -> m ()
+showEval s = handling $ lift get
+  >>= runReaderT (infer s) . Checking id
+    >> lift get >>= runReaderT (evaluate s) . view definitions
+      >>= liftIO . present
 
 -- Pretty-print a term to the console.
 present :: Term a Canonical -> IO ()
