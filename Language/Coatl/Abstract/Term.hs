@@ -17,7 +17,7 @@ import Data.Bitraversable
 import Data.Bifoldable
 import Data.Bifunctor
 -- ansi-wl-pprint
-import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
+import Text.PrettyPrint.ANSI.Leijen hiding ((<$>), (<>))
 -- lens
 import Control.Lens
 
@@ -83,7 +83,7 @@ instance Monoid a => Applicative (Term a) where
 
 instance Monoid a => Monad (Term a) where
   return = Reference mempty
-  Reference a r >>= f = undefined
+  Reference a r >>= f = over annotation (a <>) (f r)
   Applied a x y >>= f = Applied a (x >>= f) (y >>= f)
   Lambda a body >>= f = Lambda a $ body >>= maybe (return Nothing) (fmap Just . f)
 
