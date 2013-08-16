@@ -1,0 +1,5 @@
+the : Type ~ { a => a -> a };
+the _ a = a;
+
+const' : Type ~ { a => Type ~ { b => a -> b -> a } };
+const' _ _ a _ = a;
