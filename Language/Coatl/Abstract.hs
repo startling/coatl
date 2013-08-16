@@ -3,7 +3,7 @@
 {-# Language DeriveTraversable #-}
 {-# Language FlexibleContexts #-}
 {-# Language Rank2Types #-}
--- | This  module has in it the abstract representations of
+-- | This  module has in it the abstract representation of
 --   coatl programs and program environments (and some
 --    more-syntax-level representations) as well as typeclass
 --   instances and a number of small functions on them.
@@ -13,18 +13,15 @@
 --   resolved (currently with 'canonicalize', but probably
 --   something more powerful in the future) into 'Canonical'.
 --
---   For type-checking and inference we convert the @'Term'a v@s into 
---   one of two types: either a @'Check' a v@ or @'Infer' a v@. These
---   correspond (naturally) to the checkable and inferable terms
---   in coatl. Notice that every inferable term is also
---   checkable (and we can create a @'Check' a v@ from it with
---   'CInfer') but that then we need to supply a type in order to
---   check for well-formedness.
+--   All coatl terms may be checked as some type. Only some coatl terms
+--   -- everything but lambdas, right now -- may be inferred. In any
+--   case, all definitions are checked as the signature given and all
+--   signatures are checked as 'Type'.
 --
---   Finally, after type-checking, we evaluate any checkable term
---   back into a @'Term' a v@ that is supposed to be in normal
---   form -- that is, application of functions is carried out and 
---   the 'Reference' constructor is taken to represent
+--   Finally, after type-checking, we evaluate any term into what
+--   is supposed to be normal form -- that is, application of functions
+--   is carried out as deeply as possible and 'Reference' is taken
+--   to represent constructor names.
 --   constructor names.
 module Language.Coatl.Abstract
   ( Term(..)
@@ -72,40 +69,6 @@ data Declaration a v
   )
 makeLenses ''Declaration
 makePrisms ''Declaration
-
-data Infer a v
-  = IReference a v
-  | IApplication a (Infer a v) (Check a v)
-  deriving
-  ( Eq
-  , Ord
-  , Show
-  , Functor
-  , Foldable
-  , Traversable
-  )
-
-data Check a v 
-  = CLambda a (Check a (Maybe v))
-  | CInfer (Infer a v)
-  deriving
-  ( Eq
-  , Ord
-  , Show
-  , Functor
-  , Foldable
-  , Traversable
-  )
-makePrisms ''Check
-
--- | Represent some @'Syntax' a v@ as a @'Check' a v@..
-represent :: MonadError Doc m => Term a v -> m (Check a v)
-represent (Reference a v) = return . CInfer $ IReference a v
-represent (Lambda a e) = CLambda a `liftM` represent e
-represent (Applied a x y) = (,) `liftM` represent x `ap` represent y
-  >>= \(x', y') -> case preview _CInfer x' of
-    Just x'' -> return . CInfer $ IApplication a x'' y'
-    Nothing -> throwError . text $ "Term () is not inferrable"
 
 -- | Change an identifier into its canonical representation.
 canonicalize :: Identifier -> Canonical
