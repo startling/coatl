@@ -101,39 +101,43 @@ instance Bifunctor Term where
   bimap = bimapDefault
 
 instance Pretty (Term a Canonical) where
-  pretty = prettyPrec 0 where
-    operator :: Int -> Int -> String
-      -> Term a Canonical -> Term a Canonical -> Doc
-    operator up n o a b = (if n > up then parens else id)
-      $ prettyPrec (up + 1) a <+> text o <+> prettyPrec (up + 1) b
-    -- Pretty-print a term given the current precedence.
-    prettyPrec :: Int -> Term a Canonical -> Doc
-    prettyPrec n (Applied _ (Applied _ (Reference _ r) a) b) = case r of 
-      Simple (Operator o) -> operator 5 n o a b
-      Function -> operator 5 n "->" a b
-      Dependent -> operator 5 n "~" a b
-    prettyPrec n (Applied _ a b) = (if n > 10 then parens else id)
-        $ prettyPrec 10 a <+> prettyPrec 11 b
-    prettyPrec _ (Reference _ r) = pretty r
-    prettyPrec _ (Lambda _ e) = braces
-      $ let (x, w) = flip evalState names . runWriterT $ inLambda e in
-        hsep w <+> text "=>" <+> x
-    -- An infinite list of names to draw from.
+  pretty = prettyTerm names where
     names :: [String]
     names = (>>=) [1..] . flip replicateM $ ['a'..'z']
-    -- Pretty-print the body of a (potentially multiple-argument)
-    -- lambda, given an infinite list of names to keep as state
-    -- and writing, in order, the parameter names used.
-    inLambda ::
-      ( MonadState [String] m
-      , MonadWriter [Doc] m )
-     => Term a (Maybe Canonical) -> m Doc
-    inLambda l = (Simple . Name . head) `liftM` get
-      >>= \h -> modify tail >>
-        if elemOf traverse (Just h) l then inLambda l
-        else tell [pretty h] >> case fmap (maybe h id) l of
-          Lambda _ e -> inLambda e
-          elsewise -> return . pretty $ elsewise
+
+-- | Pretty-print a term, given a list of names to give to parameters
+--   for lambdas.
+prettyTerm :: [String] -> Term a Canonical -> Doc
+prettyTerm names = prettyPrec 0 where
+  operator :: Int -> Int -> String
+    -> Term a Canonical -> Term a Canonical -> Doc
+  operator up n o a b = (if n > up then parens else id)
+    $ prettyPrec (up + 1) a <+> text o <+> prettyPrec (up + 1) b
+  -- Pretty-print a term given the current precedence.
+  prettyPrec :: Int -> Term a Canonical -> Doc
+  prettyPrec n (Applied _ (Applied _ (Reference _ r) a) b) = case r of 
+    Simple (Operator o) -> operator 5 n o a b
+    Function -> operator 5 n "->" a b
+    Dependent -> operator 5 n "~" a b
+  prettyPrec n (Applied _ a b) = (if n > 10 then parens else id)
+      $ prettyPrec 10 a <+> prettyPrec 11 b
+  prettyPrec _ (Reference _ r) = pretty r
+  prettyPrec _ (Lambda _ e) = braces
+    $ let (x, w) = flip evalState names . runWriterT $ inLambda e in
+      hsep w <+> text "=>" <+> x
+  -- Pretty-print the body of a (potentially multiple-argument)
+  -- lambda, given an infinite list of names to keep as state
+  -- and writing, in order, the parameter names used.
+  inLambda ::
+    ( MonadState [String] m
+    , MonadWriter [Doc] m )
+   => Term a (Maybe Canonical) -> m Doc
+  inLambda l = (Simple . Name . head) `liftM` get
+    >>= \h -> modify tail >>
+      if elemOf traverse (Just h) l then inLambda l
+      else tell [pretty h] >> case fmap (maybe h id) l of
+        Lambda _ e -> inLambda e
+        elsewise -> return . pretty $ elsewise
 
 -- | A Prism on binary application of constructors.
 binary :: APrism' v Canonical -> Simple Prism (Term () v)
