@@ -26,10 +26,12 @@ import Control.Monad.Trans.Either
 import Control.Monad.Loops
 -- coatl
 import Language.Coatl.Abstract
+import Language.Coatl.Abstract.Term
 import Language.Coatl.Parse
 import Language.Coatl.Check
 import Language.Coatl.Check.Types
 import Language.Coatl.Evaluate
+import Data.Names
 
 -- | A type for instructions to the interactive shell.
 data Command
@@ -96,7 +98,7 @@ showType s = handling $
     >>= \r -> case preview _CInfer r of
       Nothing -> throwError . text $ "Uninferrable type."
       Just ty -> lift get >>= runReaderT (infer ty) . Checking id
-        >>= liftIO . print . indent 2 . pretty
+        >>= liftIO . present
 
 -- | Evaluate and pretty-print a term.
 showEval ::
@@ -109,4 +111,8 @@ showEval s = handling $
       Nothing -> throwError . text $ "Uninferrable type."
       Just ty -> lift get >>= runReaderT (infer ty) . Checking id
         >> lift get >>= runReaderT (evaluate r) . view definitions
-          >>= liftIO . print . indent 2 . pretty
+          >>= liftIO . present
+
+-- Pretty-print a term to the console.
+present :: Term a Canonical -> IO ()
+present t = shuffled >>= print . indent 2 . flip prettyTerm t
