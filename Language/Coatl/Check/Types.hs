@@ -7,8 +7,6 @@ module Language.Coatl.Check.Types
   , infer
   , check
   ) where
--- base
-import Text.Printf
 -- containers
 import Data.Map (Map)
 import qualified Data.Map as M

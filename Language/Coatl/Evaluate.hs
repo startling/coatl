@@ -5,8 +5,6 @@ module Language.Coatl.Evaluate where
 -- base
 import Control.Applicative
 import Control.Monad
-import Data.Maybe
-import Text.Printf
 -- transformers
 import Control.Monad.Error
 -- mtl

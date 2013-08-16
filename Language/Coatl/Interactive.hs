@@ -5,10 +5,8 @@ module Language.Coatl.Interactive where
 import Control.Applicative
 import Data.Monoid
 -- transformers
-import Control.Monad.Identity
 import Control.Monad.IO.Class
 import Control.Monad.Error
-import Control.Monad.Trans
 -- mtl
 import Control.Monad.State.Strict
 import Control.Monad.Reader

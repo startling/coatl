@@ -1,10 +1,9 @@
 {-# Language ImplicitParams #-}
 module Main where
 -- base
-import Data.Monoid
+import Data.Monoid hiding ((<>))
 import Control.Applicative
 import Control.Monad
-import Text.Printf
 -- containers
 import Data.Set (Set)
 import qualified Data.Set as S
@@ -23,7 +22,7 @@ import Data.Bifunctor
 -- trifecta
 import Text.Trifecta hiding (text)
 -- ansi-wl-pprint
-import Text.PrettyPrint.ANSI.Leijen (text, Doc)
+import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 -- hspec
 import Test.Hspec
 -- lens
@@ -302,39 +301,38 @@ evaluation = do
           , ( Simple $ Name "id'", id'' )
           , ( Simple $ Name "const", const' )
           , ( Simple $ Name "flip", flip' )
-          , ( Simple $ Name "A", Reference () "A" )
-          , ( Simple $ Name "a", Reference () "a" )
-          , ( Simple $ Name "b", Reference () "b" )
+          , ( Simple $ Name "A", Reference () . Simple $ Name "A" )
+          , ( Simple $ Name "a", Reference () . Simple $ Name "a" )
+          , ( Simple $ Name "b", Reference () . Simple $ Name "b" )
           ]
       it "evaluates monomorphic 'id' correctly" $ do
         "{a => a}" `evaluatesTo` id'
       it "evaluates applications of monomorphic 'id' correctly" $ do
-        "id a" `evaluatesTo` Reference () "a"
+        "id a" `evaluatesTo` Reference () (Simple $ Name "a")
       it "evaluates monomorphic 'const' correctly" $ do
         "{a _ => a}" `evaluatesTo` const'
       it "evaluates applications of monomorphic 'const' correctly" $ do
-        "const a b" `evaluatesTo` Reference () "a"
+        "const a b" `evaluatesTo` Reference () (Simple $ Name "a")
       it "evaluate monomorphic 'flip' correctly" $ do
         "{f b a => f a b}" `evaluatesTo` flip'
       it "evaluates applications of monomorphic 'flip' correctly" $ do
-        "flip const a b" `evaluatesTo` Reference () "b"
+        "flip const a b" `evaluatesTo` Reference () (Simple $ Name "b")
       it "evaluates polymorphic 'id' correctly" $ do
         "{_ a => a}" `evaluatesTo` id''
       it "evaluates applications of polymorphic 'id' correctly" $ do
-        "id' A a" `evaluatesTo` Reference () "a"
+        "id' A a" `evaluatesTo` Reference () (Simple $ Name "a")
   where
     evaluatesTo ::
-      ( Show v, Ord v
-      , ?read :: Map Canonical (Term () v) )
-      => String -> Term () v -> Expectation
+      ( ?read :: Map Canonical (Term () Canonical) )
+      => String -> Term () Canonical -> Expectation
     evaluatesTo s v = let ?state = () in succeeds
       $ case parseString expression mempty s of
-        Failure f -> throwError . text
-          $ printf "Parse failure on \"%s\"" (show s)
+        Failure f -> throwError
+          $ text "Parse failure on" <> text (show s)
         Success c -> do
           e <- evaluate $ fmap canonicalize c
-          unless (e == v) . throwError . text $
-            printf "%s /= %s" (show e) (show v)
+          unless (e == v) . throwError $
+            pretty e <> text "/=" <> pretty v
 
 main :: IO ()
 main = hspec . sequence_ $
