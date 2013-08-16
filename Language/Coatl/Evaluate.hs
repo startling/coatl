@@ -34,20 +34,10 @@ evaluate (Reference _ v) = view (at v) >>= flip maybe return
   (throwError $
     text "Symbol not in scope (during evaluation):" <+> pretty v)
 evaluate (Applied _ f a) = evaluate f
-  >>= \f' -> evaluate a >>= \a' -> case f' of
-    Lambda () n -> return $ substitute a' n
-    Reference () c -> return $ Applied () (Reference () c) a'
-    Applied () a b -> return $ Applied () (Applied () a b) a'
-
--- | Substitute a parameter into a lambda body and evaluate the
---   result to normal form.
-substitute :: Term () n -> Term () (Maybe n) -> Term () n
-substitute a = flip runReader (maybe a $ Reference ()) . sub where
-  sub :: Term () a -> Reader (a -> Term () n) (Term () n)
-  sub (Reference () c) = ($ c) `liftM` ask
-  sub (Applied () a b) = reduce <$> (Applied () <$> sub a <*> sub b)
-  sub (Lambda () e) = Lambda () `liftM` withReader
-    (maybe (Reference () Nothing) . (fmap Just .)) (sub e)
+  >>= \f' -> evaluate a >>= \a' -> return $ case f' of
+    Lambda () n    -> reduce $ n >>= maybe a' (Reference ())
+    Reference () c -> Applied () (Reference () c) a'
+    Applied () a b -> Applied () (Applied () a b) a'
 
 -- | Evaluate some term to normal form.
 reduce :: Term () n -> Term () n
@@ -55,6 +45,6 @@ reduce (Reference () n) = Reference () n
 reduce (Lambda () e) = Lambda () e
 reduce (Applied () a b) = let b' = reduce b in
   case reduce a of
-    Lambda () e -> substitute b' e
+    Lambda () e -> e >>= maybe b' (Reference ())
     elsewise -> Applied () elsewise b'
 
