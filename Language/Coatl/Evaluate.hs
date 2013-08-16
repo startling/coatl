@@ -42,7 +42,7 @@ evaluate (Applied _ f a) = evaluate f
 -- | Evaluate some term to normal form.
 reduce :: Term () n -> Term () n
 reduce (Reference () n) = Reference () n
-reduce (Lambda () e) = Lambda () e
+reduce (Lambda () e) = Lambda () $ reduce e
 reduce (Applied () a b) = let b' = reduce b in
   case reduce a of
     Lambda () e -> e >>= maybe b' (Reference ())
