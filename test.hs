@@ -279,10 +279,9 @@ checks = do
           . maybe (throwError . text $ "Parse error in example.") return
           . preview _Success $ (,) <$> parse v <*> parse s
         -- Fully evaluate the type we're checking as.
-        s'' <- represent s' >>= \rs ->
-          view (environment . definitions)
-            >>= runReaderT (evaluate $ rs)
-        represent v' >>= (`check` s'')
+        s'' <- view (environment . definitions)
+          >>= runReaderT (evaluate $ s')
+        check v' s''
         return ()
 
 evaluation :: Spec
@@ -333,8 +332,7 @@ evaluation = do
         Failure f -> throwError . text
           $ printf "Parse failure on \"%s\"" (show s)
         Success c -> do
-          r <- represent $ fmap canonicalize c
-          e <- evaluate r
+          e <- evaluate $ fmap canonicalize c
           unless (e == v) . throwError . text $
             printf "%s /= %s" (show e) (show v)
 

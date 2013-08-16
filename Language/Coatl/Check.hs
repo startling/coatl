@@ -95,12 +95,10 @@ checkDeclaration (Signature _ l r) = get >>= \s -> do
   -- Error if any of the names in the declarations do
   -- not yet exist.
   names r
-  -- Find the representation of signature.
-  r' <- represent r
   -- Check that the signature has type 'Type'.
-  runReaderT (check r' $ Reference () Type) (Checking id s)
+  runReaderT (check r $ Reference () Type) (Checking id s)
   -- Evaluate the signature.
-  v <- runReaderT (evaluate r') (view definitions s)
+  v <- runReaderT (evaluate r) (view definitions s)
   -- Set the signature at this lhs to the value.
   (types . at l) .= Just v
 checkDeclaration (Definition _ l r) = get >>= \s -> do
@@ -110,16 +108,14 @@ checkDeclaration (Definition _ l r) = get >>= \s -> do
   -- Error if any of the names in the declarations do
   -- not yet exist.
   names r
-  -- Find the representation of the definition.
-  r' <- represent r
   -- Find the type signature corresponding to this
   -- definition.
   ts <- use (types . at l) >>= flip maybe return
     (throwError $ text "Something's wrong: " <+> pretty l)
   -- Check that the value of the definition checks
   -- as that type.
-  runReaderT (check r' ts) (Checking id s)
+  runReaderT (check r ts) (Checking id s)
   -- Evaluate the type.
-  v <- runReaderT (evaluate r') (view definitions s)
+  v <- runReaderT (evaluate r) (view definitions s)
   -- Set the value.
   (definitions . at l) .= Just v

@@ -46,17 +46,18 @@ with a = withReaderT (set (environment . types . at Nothing)
         (M.mapKeys Just . M.map (fmap Just) $ ts)
         (M.mapKeys Just . M.map (fmap Just) $ ds)
 
+
 -- | Infer the type of an 'Infer' term.
 infer ::
   ( Ord v, Pretty v
   , MonadError Doc m )
-  => Infer b v -> ReaderT (Checking a v) m (Term () v)
-infer (IReference _ v) = view (environment . types . at v)
+  => Term b v -> ReaderT (Checking a v) m (Term () v)
+infer (Reference _ v) = view (environment . types . at v)
   >>= maybe report return where
     report :: MonadError Doc m => m a
     report = throwError $
       text "Symbol not in scope:" <+> pretty v
-infer (IApplication _ f ar) = view named >>= \nd ->
+infer (Applied _ f ar) = view named >>= \nd ->
   infer f >>= \ft ->
     case preview (binary nd) ft of
       Just (Function, a, b) -> check ar a >> return b
@@ -65,13 +66,14 @@ infer (IApplication _ f ar) = view named >>= \nd ->
           magnify (environment . definitions) (evaluate ar)
       _ -> throwError . text
         $ "Expected a function type."
-
+infer otherwise = throwError $ text "Type is not inferrable."
+ 
 -- | Check the type of some 'Check' term.
 check ::
   ( Ord v, Pretty v
   , MonadError Doc m )
-  => Check a v -> Term () v -> ReaderT (Checking b v) m ()
-check (CLambda _ l) t = view named
+  => Term a v -> Term () v -> ReaderT (Checking b v) m ()
+check (Lambda _ l) t = view named
   >>= \nd -> case preview (binary nd) t of
     -- If we're checking this lambda form as a function,
     -- check that the function body type-checks as the result type
@@ -81,5 +83,5 @@ check (CLambda _ l) t = view named
       (reduce $ Applied () (fmap Just b) (Reference () Nothing))
     a -> throwError . text
       $ "Expected a function type."
-check (CInfer i) t = infer i >>= \it -> if it == t
+check other t = infer other >>= \it -> if it == t
   then return () else throwError . text $ "Type mismatch."

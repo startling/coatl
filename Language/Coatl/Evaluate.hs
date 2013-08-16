@@ -26,14 +26,14 @@ import Language.Coatl.Abstract
 evaluate ::
   ( Ord v, Pretty v
   , MonadError Doc m )
-  => Check a v -> ReaderT (Map v (Term () n)) m (Term () n)
-evaluate (CLambda _ n) = Lambda () `liftM` withReaderT
+  => Term a v -> ReaderT (Map v (Term () n)) m (Term () n)
+evaluate (Lambda _ n) = Lambda () `liftM` withReaderT
   (set (at Nothing) (Just $ Reference () Nothing)
   . M.mapKeys Just . fmap (fmap Just)) (evaluate n)
-evaluate (CInfer (IReference _ v)) = view (at v) >>= flip maybe return
+evaluate (Reference _ v) = view (at v) >>= flip maybe return
   (throwError $
     text "Symbol not in scope (during evaluation):" <+> pretty v)
-evaluate (CInfer (IApplication _ f a)) = evaluate (CInfer f)
+evaluate (Applied _ f a) = evaluate f
   >>= \f' -> evaluate a >>= \a' -> case f' of
     Lambda () n -> return $ substitute a' n
     Reference () c -> return $ Applied () (Reference () c) a'
