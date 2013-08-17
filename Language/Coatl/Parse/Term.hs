@@ -1,18 +1,10 @@
--- | This is the set of parsing rules revolving around expressions.
+-- | This is the set of parsing rules revolving around expressions. 
 -- 
---   In any case, the most useful parsing rule in here is probably
---   'expression', which takes care of any top-level expression.
---
---   There remain some things to be done here: the scheme above
---   could probably be more nicely implemented using 'ReaderT'
---   (though there will be some complications with 'Parsing'
---   instances), and we will probably want to expose a way to specify
---   additions to the operator table.
+--   We will probably want to expose a way to specify additions
+--   to the operator table.
 module Language.Coatl.Parse.Term where
 -- base
 import Control.Applicative
-import Control.Monad
-import Data.Monoid
 -- parsers
 import Text.Parser.Expression
 -- trifecta
@@ -47,25 +39,16 @@ applied = position >>= \start -> line >>= \li -> do
   -- right 'Span'.
   return . fst . flip foldl1 as $ \(t, _) (u, r) ->
     (Applied (Span start r li) t u, r)
-
--- | Parse a simple value; that is, a reference, lambda,
---   or any parenthesized expression.
-single :: DeltaParsing m => m (Term Span Identifier)
-single =
-      try (annotated1 Reference identifier)
-  <|> lambda
-  <|> parens expression
+  where
+    -- | Parse a simple value; that is, an identifier, lambda,
+    single :: DeltaParsing m => m (Term Span Identifier)
+    single =
+          (annotated1 Reference name)
+      <|> (braces . function $ reserve operatorStyle "=>")
+      <|> parens (annotated1 Reference operator <|> expression)
 
 -- | Given some parser matching a delimiter between arguments and
 --   function bodies, parse a function.
 function :: DeltaParsing m => m () -> m (Term Span Identifier)
-function d = (d *> expression)
-   <|> (identifier >>=
-      \i -> annotated1 (flip abstract i) (function d))
-
--- | Parse a lambda, with the syntax `{a => a}`.
-lambda :: DeltaParsing m => m (Term Span Identifier)
-lambda = braces $ function arrow where
-  arrow :: (Monad m, TokenParsing m) => m ()
-  arrow = reserve operatorStyle "=>"
-
+function d = (<|>) (d *> expression) $
+  identifier >>= \i -> annotated1 (flip abstract i) (function d)

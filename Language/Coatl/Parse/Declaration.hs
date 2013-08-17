@@ -23,5 +23,5 @@ definition = annotated2 Definition identifier
 -- | Parse any top-level declaration.
 declaration :: DeltaParsing f => f (Declaration Span Identifier)
 declaration =
-       ((try signature <?> "type signature")
-    <|> (try definition <?> "definition")) <* semi
+     ((try signature <?> "type signature")
+  <|> (try definition <?> "definition")) <* semi
