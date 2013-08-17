@@ -40,7 +40,7 @@ operatorStyle = IdentifierStyle
   } where
     part :: (Monad m, CharParsing m) => m Char
     part = satisfy $ \x -> (isSymbol x || isPunctuation x)
-      && x `notElem` "\"_{}()"
+      && x `notElem` "\"_{}();"
 
 -- | Parse a coatl operator.
 operator :: (Monad m, TokenParsing m) => m Identifier

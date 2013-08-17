@@ -13,15 +13,15 @@ import Language.Coatl.Parse.Term
 -- | Parse a top-level type signature.
 signature :: DeltaParsing m => m (Declaration Span Identifier)
 signature = annotated2 Signature identifier  
-  (reserve operatorStyle ":" *> expression)
+  (symbol ":" *> expression) <* semi
 
 -- | Parse a top-level definition declaration.
 definition :: DeltaParsing m => m (Declaration Span Identifier)
 definition = annotated2 Definition identifier
-  (function $ reserve operatorStyle "=")
+  (function $ reserve operatorStyle "=") <* semi
 
 -- | Parse any top-level declaration.
 declaration :: DeltaParsing f => f (Declaration Span Identifier)
 declaration =
      ((try signature <?> "type signature")
-  <|> (try definition <?> "definition")) <* semi
+  <|> (try definition <?> "definition"))
