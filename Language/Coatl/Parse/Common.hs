@@ -46,6 +46,10 @@ operatorStyle = IdentifierStyle
 operator :: (Monad m, TokenParsing m) => m Identifier
 operator = Operator <$> ident operatorStyle
 
+-- | Parse either a name or an operator.
+identifier :: (Monad m, TokenParsing m) => m Identifier
+identifier = name <|> parens operator
+
 -- | Annotate some parser with a 'Span' and apply the 'Span' and
 --   the results to some unary function.
 annotated1 :: DeltaParsing f => (Span -> a -> r) -> f a -> f r
@@ -57,9 +61,3 @@ annotated2 :: DeltaParsing f
   => (Span -> a -> b -> r) -> f a -> f b -> f r
 annotated2 f a b = (\((t, u) :~ s) -> f s t u) <$> spanned
   ((,) <$> a <*> b)
-
--- | Parse with a top-level parametric parser.
-topLevel :: (Monad f, TokenParsing f)
-  => ((a -> a) -> f Identifier -> f a) -> f a
-topLevel f = f id (name <|> parens operator)
-
