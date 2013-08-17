@@ -77,6 +77,11 @@ annotation f (Lambda a e) = (\n -> Lambda n e) <$> f a
 annotation f (Applied a x y) = (\n -> Applied n x y) <$> f a
 annotation f (Reference a n) = (\x -> Reference x n) <$> f a
 
+-- | Abstract a term into a lambda term, given a variable to bind.
+abstract :: Eq n => a -> n -> Term a n -> Term a n
+abstract a s = Lambda a . fmap
+  (\x -> if x == s then Nothing else Just x)
+
 instance Monoid a => Applicative (Term a) where
   pure = return
   (<*>) = ap
