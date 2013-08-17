@@ -1,4 +1,5 @@
 {-# Language FlexibleContexts #-}
+{-# Language TemplateHaskell #-}
 -- | Check and infer coatl types.
 module Language.Coatl.Check.Types
   ( Checking (..)

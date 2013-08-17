@@ -3,6 +3,7 @@
 {-# Language DeriveTraversable #-}
 {-# Language FlexibleContexts #-}
 {-# Language Rank2Types #-}
+{-# Language TemplateHaskell #-}
 -- | This  module has in it the abstract representation of
 --   coatl programs and program environments (and some
 --    more-syntax-level representations) as well as typeclass
