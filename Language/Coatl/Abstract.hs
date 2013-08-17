@@ -30,6 +30,7 @@ module Language.Coatl.Abstract
   , Canonical(..)
   , annotation
   , binary
+  , abstract
   , module Language.Coatl.Abstract
   ) where
 -- base
@@ -104,17 +105,15 @@ makeLenses ''Environment
 --   to corresponding constructors.
 standard :: Environment a Canonical
 standard = Environment types defs where
-  type_ = Reference () Type
-  function f a b = (Function, a, b) ^. (re $ binary f)
-  dependent a b = (Dependent, a, b) ^. (re $ binary id)
-  types = M.fromList
-    [ (Type, type_)
-    , (Function, function id type_ $ function id type_ type_)
-    , (Dependent, dependent type_ . Lambda ()
-      $ function _Just
-          (function _Just
-            (Reference () Nothing) (Reference () $ Just Type))
-          (Reference () $ Just Type))
+  n = Reference () . Name
+  o = Reference () . Operator
+  function a b = Applied () (Applied () (o "->") a) b
+  types = fmap canonicalize <$> M.fromList
+    [ (Type, n "Type")
+    , (Function, function (n "Type") (function (n "Type") (n "Type")))
+    , (Dependent, Applied () (Applied () (o "~") (n "Type"))
+      . abstract () (Name "a")
+        $ function (function (n "a") (n "Type")) (n "Type"))
     ]
   defs = M.fromList
     [ (Type, Reference () Type)
