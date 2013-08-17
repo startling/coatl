@@ -45,12 +45,86 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 
+source-repository head
+  type: git
+  location: git://github.com/startling/coatl.git
+
 library
   -- Modules exported by the library.
-  exposed-modules:     Data.Names, Language.Coatl.Abstract, Language.Coatl.Check, Language.Coatl.Evaluate, Language.Coatl.Graph, Language.Coatl.Interactive, Language.Coatl.Parse, Language.Coatl.Abstract.Term, Language.Coatl.Check.Types, Language.Coatl.Parse.Common, Language.Coatl.Parse.Declaration, Language.Coatl.Parse.Term
+  exposed-modules:
+      Data.Names
+    , Language.Coatl.Abstract
+    , Language.Coatl.Check
+    , Language.Coatl.Evaluate
+    , Language.Coatl.Graph
+    , Language.Coatl.Interactive
+    , Language.Coatl.Parse
+    , Language.Coatl.Abstract.Term
+    , Language.Coatl.Check.Types
+    , Language.Coatl.Parse.Common
+    , Language.Coatl.Parse.Declaration
+    , Language.Coatl.Parse.Term
   
   -- Modules included in this library but not exported.
   -- other-modules:       
   
   -- Other library packages from which modules are imported.
-  build-depends:       base ==4.6.*, utf8-string ==0.3.*, file-embed ==0.0.*, random ==1.0.*, mtl ==2.1.*, containers ==0.5.*, lens ==3.9.*, ansi-wl-pprint ==0.6.*, monad-loops ==0.4.*, either ==3.4.*, trifecta ==1.1.*, transformers ==0.3.*, haskeline ==0.7.*, bifunctors ==3.2.*, unordered-containers ==0.2.*, parsers ==0.8.*
+  build-depends:
+      base == 4.6.*
+    , utf8-string == 0.3.*
+    , file-embed == 0.0.*
+    , random == 1.0.*
+    , mtl == 2.1.*
+    , containers ==0.5.*
+    , lens ==3.9.*
+    , ansi-wl-pprint ==0.6.*
+    , monad-loops ==0.4.*
+    , either ==3.4.*
+    , trifecta ==1.1.*
+    , transformers ==0.3.*
+    , haskeline ==0.7.*
+    , bifunctors ==3.2.*
+    , unordered-containers ==0.2.*
+    , parsers ==0.8.*
+
+test-suite tests
+  type: exitcode-stdio-1.0
+  main-is: test.hs
+  build-depends:
+      base == 4.6.*
+    , utf8-string == 0.3.*
+    , file-embed == 0.0.*
+    , random == 1.0.*
+    , mtl == 2.1.*
+    , containers ==0.5.*
+    , lens ==3.9.*
+    , ansi-wl-pprint ==0.6.*
+    , monad-loops ==0.4.*
+    , either ==3.4.*
+    , trifecta ==1.1.*
+    , transformers ==0.3.*
+    , haskeline ==0.7.*
+    , bifunctors ==3.2.*
+    , unordered-containers ==0.2.*
+    , parsers ==0.8.*
+    , hspec ==1.6.*
+
+executable coatli
+  main-is: coatli.hs
+  build-depends:
+      base == 4.6.*
+    , utf8-string == 0.3.*
+    , file-embed == 0.0.*
+    , random == 1.0.*
+    , mtl == 2.1.*
+    , containers ==0.5.*
+    , lens ==3.9.*
+    , ansi-wl-pprint ==0.6.*
+    , monad-loops ==0.4.*
+    , either ==3.4.*
+    , trifecta ==1.1.*
+    , transformers ==0.3.*
+    , haskeline ==0.7.*
+    , bifunctors ==3.2.*
+    , unordered-containers ==0.2.*
+    , parsers ==0.8.*
