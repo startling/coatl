@@ -29,7 +29,7 @@ import Language.Coatl.Parse
 import Language.Coatl.Check
 import Language.Coatl.Check.Types
 import Language.Coatl.Evaluate
-import Data.Names
+import Language.Coatl.Extra.Names
 
 -- | A type for instructions to the interactive shell.
 data Command

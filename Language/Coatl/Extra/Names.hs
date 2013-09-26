@@ -1,5 +1,5 @@
 {-# Language TemplateHaskell #-}
-module Data.Names where
+module Language.Coatl.Extra.Names where
 -- base
 import Control.Concurrent.MVar
 import System.IO.Unsafe

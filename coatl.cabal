@@ -52,11 +52,11 @@ source-repository head
 library
   -- Modules exported by the library.
   exposed-modules:
-      Data.Names
+      Language.Coatl.Extra.Graph
+    , Language.Coatl.Extra.Names
     , Language.Coatl.Abstract
     , Language.Coatl.Check
     , Language.Coatl.Evaluate
-    , Language.Coatl.Graph
     , Language.Coatl.Interactive
     , Language.Coatl.Parse
     , Language.Coatl.Abstract.Term

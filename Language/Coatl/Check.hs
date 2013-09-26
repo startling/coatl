@@ -26,10 +26,10 @@ import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 -- trifecta
 import Text.Trifecta hiding (text)
 -- coatl
-import Language.Coatl.Graph
 import Language.Coatl.Abstract
 import Language.Coatl.Evaluate
 import Language.Coatl.Check.Types
+import Language.Coatl.Extra.Graph
 
 -- | Run a number of 'EitherT e m b' with the same error state,
 --   'mappend' the errors together, and throw the result.

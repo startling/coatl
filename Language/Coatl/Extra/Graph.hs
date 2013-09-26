@@ -2,7 +2,7 @@
 {-# Language FlexibleInstances #-}
 {-# Language MultiParamTypeClasses #-}
 -- | Some functions on directed graphs.
-module Language.Coatl.Graph where
+module Language.Coatl.Extra.Graph where
 -- base
 import Data.Maybe
 import Data.Foldable
