@@ -5,9 +5,7 @@ module Language.Coatl.Check where
 -- base
 import Control.Applicative
 import Control.Arrow ((&&&))
-import Data.Either
-import Data.Foldable (toList, traverse_, Foldable)
-import Data.Monoid
+import Data.Foldable (Foldable)
 import qualified Data.Traversable as T
 -- containers
 import Data.Map (Map)
@@ -17,8 +15,6 @@ import Control.Monad.Error
 -- mtl
 import Control.Monad.Reader
 import Control.Monad.State
--- either
-import Control.Monad.Trans.Either
 -- lens
 import Control.Lens
 -- ansi-wl-pprint
@@ -30,15 +26,7 @@ import Language.Coatl.Abstract
 import Language.Coatl.Evaluate
 import Language.Coatl.Check.Types
 import Language.Coatl.Extra.Graph
-
--- | Run a number of 'EitherT e m b' with the same error state,
---   'mappend' the errors together, and throw the result.
-collect :: (Foldable t , Monoid e , MonadError e m)
-  => (a -> EitherT e m b) -> t a -> m ()
-collect f = mapM (runEitherT . f) . toList
-  >=> \e -> let ls = lefts e in
-    if null ls then return ()
-      else throwError (mconcat ls)
+import Language.Coatl.Extra.Error
 
 -- | Create a graph from a list of declarations, with the provision
 --   that each value declaration depends on the corresponding type

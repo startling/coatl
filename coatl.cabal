@@ -54,6 +54,7 @@ library
   exposed-modules:
       Language.Coatl.Extra.Graph
     , Language.Coatl.Extra.Names
+    , Language.Coatl.Extra.Error
     , Language.Coatl.Abstract
     , Language.Coatl.Check
     , Language.Coatl.Evaluate
