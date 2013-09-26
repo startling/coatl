@@ -3,8 +3,9 @@
 -- | Evaluate coatl terms to normal form.
 module Language.Coatl.Evaluate where
 -- base
-import Control.Applicative
 import Control.Monad
+import Data.Monoid
+import Data.Traversable as T
 -- transformers
 import Control.Monad.Error
 -- mtl
@@ -12,6 +13,8 @@ import Control.Monad.Reader
 -- containers
 import Data.Map (Map)
 import qualified Data.Map as M
+-- bifunctors
+import Data.Bifunctor
 -- lens
 import Control.Lens
 -- ansi-wl-pprint
@@ -22,27 +25,23 @@ import Language.Coatl.Abstract
 -- | Evaluate some checkable term to normal form, given
 --   a 'Map' of the (normal) values of things it might reference.
 evaluate ::
-  ( Ord v, Pretty v
-  , MonadError Doc m )
-  => Term a v -> ReaderT (Map v (Term () n)) m (Term () n)
-evaluate (Lambda _ n) = Lambda () `liftM` withReaderT
-  (set (at Nothing) (Just $ Reference () Nothing)
-  . M.mapKeys Just . fmap (fmap Just)) (evaluate n)
-evaluate (Reference _ v) = view (at v) >>= flip maybe return
-  (throwError $
-    text "Symbol not in scope (during evaluation):" <+> pretty v)
-evaluate (Applied _ f a) = evaluate f
-  >>= \f' -> evaluate a >>= \a' -> return $ case f' of
-    Lambda () n    -> reduce $ n >>= maybe a' (Reference ())
-    Reference () c -> Applied () (Reference () c) a'
-    Applied () a b -> Applied () (Applied () a b) a'
+  ( MonadReader (Map s (Term () v)) m
+  , MonadError Doc m
+  , Pretty s
+  , Ord s
+  ) => Term a s -> m (Term () v)
+evaluate = liftM (reduce . join) . T.mapM find . first (const ()) where
+  find v = M.lookup v `liftM` ask >>= \c -> case c of
+    Nothing -> throwError
+      $ text "Symbol not in scope during evaluation:"
+      <+> pretty v
+    Just v' -> return v'
 
 -- | Evaluate some term to normal form.
 reduce :: Term () n -> Term () n
-reduce (Reference () n) = Reference () n
-reduce (Lambda () e) = Lambda () $ reduce e
-reduce (Applied () a b) = let b' = reduce b in
-  case reduce a of
-    Lambda () e -> e >>= maybe b' (Reference ())
-    elsewise -> Applied () elsewise b'
+reduce (Reference _ n) = Reference () n
+reduce (Lambda _ e) = Lambda () $ reduce e
+reduce (Applied _ a b) = let b' = reduce b in case reduce a of
+  Lambda () e -> reduce $ e >>= maybe b' (Reference ())
+  elsewise -> Applied () elsewise $ b'
 
