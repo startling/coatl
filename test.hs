@@ -267,8 +267,7 @@ checks = do
     parse = parseString expression mempty
     checksAs v s = let
       ?state = ()
-      ?read = Checking id
-          . set (types . at (Simple $ Name "a")) (Just $ Reference () Type)
+      ?read = set (types . at (Simple $ Name "a")) (Just $ Reference () Type)
           . set (definitions . at (Simple $ Name "a"))
             (Just . Reference () . Simple . Name $ "a")
           $ standard
@@ -278,9 +277,8 @@ checks = do
           . maybe (throwError . text $ "Parse error in example.") return
           . preview _Success $ (,) <$> parse v <*> parse s
         -- Fully evaluate the type we're checking as.
-        s'' <- view (environment . definitions)
-          >>= runReaderT (evaluate $ s')
-        check v' s''
+        s'' <- view definitions >>= runReaderT (evaluate $ s')
+        ask >>= \e -> check e v' s''
         return ()
 
 evaluation :: Spec
