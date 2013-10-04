@@ -94,7 +94,7 @@ showType ::
   , MonadState (Environment a Canonical) m )
   => Term Span Canonical -> m ()
 showType s = handling $ lift get
-  >>= runReaderT (infer s) . Checking id
+  >>= flip infer s
     >>= liftIO . present
 
 -- | Evaluate and pretty-print a term.
@@ -103,7 +103,7 @@ showEval ::
   , MonadState (Environment a Canonical) m )
   => Term Span Canonical -> m ()
 showEval s = handling $ lift get
-  >>= runReaderT (infer s) . Checking id
+  >>= flip infer s
     >> lift get >>= runReaderT (evaluate s) . view definitions
       >>= liftIO . present
 
