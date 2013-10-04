@@ -19,8 +19,8 @@ expression = buildExpressionParser table applied
   <?> "expression" where
     -- This might annotate things slightly confusingly;
     -- I can't see of a better way to do it.
-    binary (s :~ sp) t = Applied sp (Applied sp (Reference sp s) t)
-    table = [[Infix (binary <$> spanned operator) AssocRight]]
+    binop (s :~ sp) t = Applied sp (Applied sp (Reference sp s) t)
+    table = [[Infix (binop <$> spanned operator) AssocRight]]
 
 -- | Parse any non-zero-length sequence of simple values,
 --   treating them as applications.

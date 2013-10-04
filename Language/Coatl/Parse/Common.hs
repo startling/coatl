@@ -6,7 +6,6 @@ import Data.Char
 -- containers
 import qualified Data.HashSet as H
 -- parsers
-import Text.Parser.Expression
 import qualified Text.Parser.Token.Highlight as Highlight
 -- trifecta
 import Text.Trifecta

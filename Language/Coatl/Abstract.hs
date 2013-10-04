@@ -35,19 +35,12 @@ module Language.Coatl.Abstract
   ) where
 -- base
 import Control.Applicative
-import Control.Monad
 import Data.Foldable (Foldable)
--- transformers
-import Control.Monad.Error
 -- containers
 import Data.Map (Map)
 import qualified Data.Map as M
 -- lens
 import Control.Lens
--- ansi-wl-pprint
-import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
--- monad-loops
-import Control.Monad.Loops
 -- coatl
 import Language.Coatl.Abstract.Term
 
@@ -104,18 +97,18 @@ makeLenses ''Environment
 --   The definitions just map 'Type', 'Dependent', and 'Function'
 --   to corresponding constructors.
 standard :: Environment a Canonical
-standard = Environment types defs where
+standard = Environment signatures values where
   n = Reference () . Name
   o = Reference () . Operator
   function a b = Applied () (Applied () (o "->") a) b
-  types = fmap canonicalize <$> M.fromList
+  signatures = fmap canonicalize <$> M.fromList
     [ (Type, n "Type")
     , (Function, function (n "Type") (function (n "Type") (n "Type")))
     , (Dependent, Applied () (Applied () (o "~") (n "Type"))
       . abstract () (Name "a")
         $ function (function (n "a") (n "Type")) (n "Type"))
     ]
-  defs = M.fromList
+  values = M.fromList
     [ (Type, Reference () Type)
     , (Dependent, Reference () Dependent)
     , (Function, Reference () Function)

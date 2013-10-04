@@ -154,7 +154,7 @@ binary nd = prism create decompose where
     i@(Applied _ (Applied _ (Reference _ c) a) b) ->
       case preview (clonePrism nd) c of
         Nothing -> Left i
-        Just c -> Right (c, a, b)
+        Just d -> Right (d, a, b)
     elsewise -> Left elsewise
 
 

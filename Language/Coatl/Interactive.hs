@@ -11,9 +11,9 @@ import Control.Monad.Error
 import Control.Monad.State.Strict
 import Control.Monad.Reader
 -- trifecta
-import Text.Trifecta hiding (text)
+import Text.Trifecta hiding (text, line)
 -- ansi-wl-pprint
-import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
+import Text.PrettyPrint.ANSI.Leijen hiding ((<$>), line)
 -- lens
 import Control.Lens
 -- haskeline

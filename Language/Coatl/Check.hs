@@ -6,9 +6,7 @@ module Language.Coatl.Check where
 import Control.Applicative
 import Control.Arrow ((&&&))
 import Data.Foldable (Foldable)
-import qualified Data.Traversable as T
 -- containers
-import Data.Map (Map)
 import qualified Data.Map as M
 -- transformers
 import Control.Monad.Error
@@ -19,8 +17,6 @@ import Control.Monad.State
 import Control.Lens
 -- ansi-wl-pprint
 import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
--- trifecta
-import Text.Trifecta hiding (text)
 -- coatl
 import Language.Coatl.Abstract
 import Language.Coatl.Evaluate

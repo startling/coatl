@@ -4,7 +4,6 @@
 module Language.Coatl.Evaluate where
 -- base
 import Control.Monad
-import Data.Monoid
 import Data.Traversable as T
 -- transformers
 import Control.Monad.Error
@@ -15,8 +14,6 @@ import Data.Map (Map)
 import qualified Data.Map as M
 -- bifunctors
 import Data.Bifunctor
--- lens
-import Control.Lens
 -- ansi-wl-pprint
 import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 -- coatl

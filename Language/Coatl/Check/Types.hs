@@ -6,7 +6,6 @@ module Language.Coatl.Check.Types
   , check
   ) where
 -- containers
-import Data.Map (Map)
 import qualified Data.Map as M
 -- transformers
 import Control.Monad.Error
@@ -61,7 +60,7 @@ infer' (Applied _ f ar) = view named >>= \nd ->
           magnify (environment . definitions) (evaluate ar)
       _ -> throwError . text
         $ "Expected a function type."
-infer' otherwise = throwError $ text "Type is not infer'rable."
+infer' _ = throwError $ text "Type is not infer'rable."
 
 -- | Check the type of some checkable term given a 'Checking'.
 check' ::
@@ -76,7 +75,7 @@ check' (Lambda _ l) t = view named
     Just (Function, a, b) -> with a $ check' l (fmap Just b)
     Just (Dependent, a, b) -> with a $ check' l
       (reduce $ Applied () (fmap Just b) (Reference () Nothing))
-    a -> throwError . text
+    _ -> throwError . text
       $ "Expected a function type."
 check' other t = infer' other >>= \it -> if it == t
   then return () else throwError . text $ "Type mismatch."

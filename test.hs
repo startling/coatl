@@ -5,8 +5,6 @@ import Data.Monoid hiding ((<>))
 import Control.Applicative
 import Control.Monad
 -- containers
-import Data.Set (Set)
-import qualified Data.Set as S
 import Data.Map (Map)
 import qualified Data.Map as M
 -- transformers
@@ -105,6 +103,7 @@ parsing = do
           , "the _ a = a;"
           ]
 
+graphs :: Spec
 graphs =
   describe "Language.Coatl.Graph" $ do
     let graph = associations
@@ -182,6 +181,7 @@ graphs =
       before a b (s : ss) = if any ((== b) . fst) s then False
         else if any ((== a) . fst) s then True else before a b ss
 
+checks :: Spec
 checks = do
   describe "Language.Coatl.Check" $ do
     let
@@ -200,7 +200,7 @@ checks = do
           , "y : x Type (a -> a);"
           , "y n = x a n;"
           ]
-        dependsOn a b = (g `shouldSatisfy`) $ \g -> elemOf (next g) b a
+        dependsOn a b = (g `shouldSatisfy`) $ \g' -> elemOf (next g') b a
       it "has definitions depend on corresponding signatures" $ do
         forM_ [Simple $ Name "x", Simple $ Name "y"] $ \n ->
           (False, n) `dependsOn` (True, n)
@@ -277,7 +277,7 @@ checks = do
           . maybe (throwError . text $ "Parse error in example.") return
           . preview _Success $ (,) <$> parse v <*> parse s
         -- Fully evaluate the type we're checking as.
-        s'' <- view definitions >>= runReaderT (evaluate $ s')
+        s'' <- view definitions >>= runReaderT (evaluate s')
         ask >>= \e -> check e v' s''
         return ()
 

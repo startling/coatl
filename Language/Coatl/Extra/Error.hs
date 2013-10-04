@@ -2,7 +2,7 @@ module Language.Coatl.Extra.Error where
 -- base
 import Data.Either
 import Data.Monoid
-import Data.Foldable (toList, traverse_, Foldable)
+import Data.Foldable (toList, Foldable)
 -- transformers
 import Control.Monad.Error
 -- either

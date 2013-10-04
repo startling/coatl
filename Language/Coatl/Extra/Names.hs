@@ -1,8 +1,5 @@
 {-# Language TemplateHaskell #-}
 module Language.Coatl.Extra.Names where
--- base
-import Control.Concurrent.MVar
-import System.IO.Unsafe
 -- utf8-string
 import Data.ByteString.UTF8 (toString)
 -- file-embed

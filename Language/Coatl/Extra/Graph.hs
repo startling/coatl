@@ -4,7 +4,6 @@
 -- | Some functions on directed graphs.
 module Language.Coatl.Extra.Graph where
 -- base
-import Data.Maybe
 import Data.Foldable
 import Control.Applicative
 import Control.Arrow
@@ -62,18 +61,18 @@ next (Graph a n) f k = maybe (pure k) (k <$)
 --  Note that this does not consider a path to exist between a
 --  node and itself unless there is an explicit connection between them.
 path :: Ord k => Graph k a -> k -> k -> Bool
-path g s e = evalState (loop s) . S.fromList
+path g s e = evalState (looping s) . S.fromList
   . toListOf (ifolded . asIndex) $ g where
     -- Look through all the next of a node to tell whether
     -- there exists a path from the node to the target.
-    loop k = get >>= \unvisited -> do
+    looping k = get >>= \unvisited -> do
       -- Remove this from the set of unvisited nodes.
       put $ S.delete k unvisited
       -- If the target is in here, then great!
       if elemOf (next g) e k then return True else do
         -- Otherwise, check if there exists a path from any
         -- neighbor we have not checked before.
-        anyM loop . (`toListOf` k)
+        anyM looping . (`toListOf` k)
           $ filtered (`S.member` unvisited) . next g
 
 -- | Find all the cycles in a 'Graph k'. This is a modification
@@ -107,7 +106,7 @@ sort g = let cs = cycles g in
     -- Fold over the identifiers whose nodes only point to
     -- the given identifiers and that are not one of them.
     only' :: Ord k => Set k -> IndexedFold k (Graph k n) n
-    only' s f g@(Graph a ns) = (g <$) . flip ifolded g . Indexed
+    only' s f gr@(Graph a ns) = (gr <$) . flip ifolded gr . Indexed
       $ \i n -> if i `S.notMember` s && allOf a
         (\x -> x `S.member` s || x `M.notMember` ns) n
           then indexed f i n
