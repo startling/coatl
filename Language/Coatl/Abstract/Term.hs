@@ -120,10 +120,12 @@ prettyTerm names = prettyPrec 0 where
     $ prettyPrec (up + 1) a <+> text o <+> prettyPrec (up + 1) b
   -- Pretty-print a term given the current precedence.
   prettyPrec :: Int -> Term a Canonical -> Doc
-  prettyPrec n (Applied _ (Applied _ (Reference _ r) a) b) = case r of 
-    Simple (Operator o) -> operator 5 n o a b
-    Function -> operator 5 n "->" a b
-    Dependent -> operator 5 n "~" a b
+  prettyPrec n (Applied _ (Applied _ (Reference _ Function) a) b)
+    = operator 5 n "->" a b
+  prettyPrec n (Applied _ (Applied _ (Reference _ Dependent) a) b)
+    = operator 5 n "~" a b
+  prettyPrec n (Applied _ (Applied _ (Reference _ (Simple (Operator o))) a) b)
+    = operator 5 n o a b
   prettyPrec n (Applied _ a b) = (if n > 10 then parens else id)
       $ prettyPrec 10 a <+> prettyPrec 11 b
   prettyPrec _ (Reference _ r) = pretty r
