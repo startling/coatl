@@ -108,7 +108,7 @@ test-suite tests
     , bifunctors ==3.2.*
     , unordered-containers ==0.2.*
     , parsers ==0.8.*
-    , hspec ==1.6.*
+    , hspec ==1.6.0
 
 executable coatli
   main-is: coatli.hs
